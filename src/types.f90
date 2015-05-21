@@ -1,12 +1,14 @@
 module types
-  use iso_fortran_env, only: ik => int32, &
+  use iso_fortran_env, only: &
+  & ik => int32, &
 #ifndef DOUBLE
   & rk => real32, &
 #else
   & rk => real64, &
 #endif
   & stdout => output_unit, &
-  & stdin => input_unit, stderr => error_unit
+  & stdin => input_unit, &
+  & stderr => error_unit
   implicit none
   private
 !*****************************************************************************80
@@ -128,7 +130,7 @@ contains
     character(len=*), intent(in) :: name
     !
     integer(ik) :: i, m
-    character(len=*), parameter :: wrf = '(*(es12.4e3,:,","))'
+    character(len=*), parameter :: wrf = '(*('//es//',:,","))'
     !
     m = size(mtx,dim=1)
     !

@@ -42,7 +42,6 @@ module read_input
       call read_input_string(inp_str,rstat)
       select case(rstat)
       case( 0 )
-        end_of_file = .true.
         exit ra
       case( 1 ); cycle ra
       case( 2 ); continue
@@ -122,7 +121,6 @@ module read_input
       call read_input_string(inp_str,rstat)
       select case(rstat)
       case( 0 )
-        end_of_file = .true.
         exit ra
       case( 1 ); cycle ra
       case( 2 )
@@ -175,7 +173,6 @@ module read_input
       call read_input_string(inp_str,rstat)
       select case(rstat)
       case( 0 )
-        end_of_file = .true.
         exit ra
       case( 1 ); cycle ra
       case( 2 )
@@ -228,6 +225,7 @@ module read_input
     read(unit=inp_file,fmt='(a)',iostat=istat) inp_str
     if( is_iostat_end(istat) ) then
       rstat = 0 ! End of file
+      end_of_file = .true.
       return
     end if
     ! Adjust
