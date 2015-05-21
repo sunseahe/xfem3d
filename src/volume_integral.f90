@@ -58,7 +58,30 @@ contains
     end do
     call write_scalar_field(step,2,field_name,&
     & field_description,lsf_field,.true.,istat,emsg)
-    !
+    ! Third function
+    call create_frame(step,'Genus two',3,3.0_rk,&
+    &istat,emsg)
+    do e = 1, size(finite_elements)
+      do i = 1, nver
+        x = finite_elements(e)%get_ver_coo(i)
+        active_node = finite_elements(e)%connectivity(i)
+        lsf_field(active_node) = s_3(x)
+      end do
+    end do
+    call write_scalar_field(step,3,field_name,&
+    & field_description,lsf_field,.true.,istat,emsg)
+    ! Fourth function
+    call create_frame(step,'Genus seven',4,4.0_rk,&
+    &istat,emsg)
+    do e = 1, size(finite_elements)
+      do i = 1, nver
+        x = finite_elements(e)%get_ver_coo(i)
+        active_node = finite_elements(e)%connectivity(i)
+        lsf_field(active_node) = s_4(x)
+      end do
+    end do
+    call write_scalar_field(step,4,field_name,&
+    & field_description,lsf_field,.true.,istat,emsg)
     ! Finish odb api
     call finish_odb_api()
     !
