@@ -1,9 +1,11 @@
+# Objects
 *.mod
 *.o
+# Abaqus
+*.jnl
 *.rpy
 *.rpy.*
-*.log
-*.dat
 *.odb
 *.inp
+# Program
 xfem
