@@ -1,0 +1,9 @@
+*.mod
+*.o
+*.rpy
+*.rpy.*
+*.log
+*.dat
+*.odb
+*.inp
+xfem
