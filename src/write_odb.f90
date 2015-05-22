@@ -76,7 +76,7 @@ module write_odb
   end interface
 !*****************************************************************************80
   public :: start_odb_api, finish_odb_api, write_model_data, create_step, &
-  & create_frame, write_scalar_field
+  & create_frame, write_scalar_field, close_odb_file
 !*****************************************************************************80
   contains
 !*****************************************************************************80
@@ -201,5 +201,14 @@ module write_odb
     &logical(field_default,kind=c_bool))
     !
   end subroutine write_scalar_field
-
+!*****************************************************************************80
+! Write scalar field
+!*****************************************************************************80
+  subroutine close_odb_file(istat,emsg)
+    integer(ik), intent(out) :: istat
+    character(len=*), intent(out) :: emsg
+    call close_odb(odb)
+    odb = c_null_ptr
+  end subroutine close_odb_file
+!*****************************************************************************80
 end module write_odb

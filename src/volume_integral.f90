@@ -5,13 +5,13 @@ module volume_integral
   use xtet, only: set_sub_xtets
   use lsf_test_functions
   use write_odb, only: start_odb_api, finish_odb_api, write_model_data,  &
-  & create_step, create_frame, write_scalar_field
+  & create_step, create_frame, write_scalar_field, close_odb_file
   use read_input, only: input_file_name
   implicit none
 !*****************************************************************************80
   ! For writing in input file and checking global sub tets
   integer(ik) :: gst_inp_file = 0
-  logical(lk) :: write_global_sub_tets_to_input_file = .false.
+  logical(lk) :: wrt_gst_inpf = .true.
 !*****************************************************************************80
   public :: test_functions
 !*****************************************************************************80
@@ -87,6 +87,9 @@ contains
     end do
     call write_scalar_field(step,4,field_name,&
     & field_description,lsf_field,.true.,istat,emsg)
+    ! Close odb file
+    call close_odb_file(istat,emsg)
+    if( istat /= 0 ) return
     ! Finish odb api
     call finish_odb_api()
     !
@@ -136,7 +139,7 @@ contains
       !write(stdout,'(a,i0)') 'Nuber of subtets: ', size(sub_tets)
       ! Calculate integral
       do t = 1, size(sub_tets)
-        count_gst = count_gst + 1
+
         !
         !write(stdout,'(a,i0,a)') 'Sub tet ', t, ' local coordinates'
         !call sub_tets(t)%write()
@@ -155,14 +158,14 @@ contains
         end do
         ! Global_sub_tet
         do i = 1, nver
-          connectivity_gst(i) = count_gst + ( i - 1 )
+          connectivity_gst(i) = nver * count_gst + i
         end do
         global_sub_tet = tet_dat(vert=sub_tets_g_coo_pnts,connectivity=&
         &connectivity_gst)
         !write(stdout,'(a,i0,a)') 'Sub tet ', t, ' global coordinates'
         !call global_sub_tet%write()
 
-        if ( write_global_sub_tets_to_input_file ) then
+        if ( wrt_gst_inpf ) then
           call global_sub_tets_ll%add(global_sub_tet,istat,emsg)
           if ( istat /= 0 ) return
         end if
@@ -172,13 +175,14 @@ contains
         !write(stdout,'(a,i0,a,'//es//')') 'Subtet number: ', t, ', volume: ', &
         !& volume_tet
         volume = volume + volume_tet
+        count_gst = count_gst + 1
       end do
       ! Deallocate sub tets
       deallocate(sub_tets,stat=istat,errmsg=emsg)
       if ( istat /= 0 ) return
     end do elements
 !*****************************************************************************80
-    if ( write_global_sub_tets_to_input_file ) then
+    if ( wrt_gst_inpf ) then
       call global_sub_tets_ll%fill_array(global_sub_tets,istat,emsg)
       if ( istat /= 0 ) return
       call global_sub_tets_ll%clean(istat,emsg)
@@ -194,6 +198,11 @@ contains
       end do
       ! Write elements
       write(gst_inp_file,fmt='(a)') '*element,type=c3d4'
+      do e = 1, size(global_sub_tets)
+        write(gst_inp_file,fmt='(i0,",",4(i0,:,","))') e, &
+        & global_sub_tets(e)%connectivity
+      end do
+      close(gst_inp_file)
     end if
     ! Sucess
     istat = 0
@@ -210,7 +219,6 @@ contains
     integer(ik) :: n
     real(rk), parameter :: s_1_vol = 0.0334707_rk, s_2_vol = 0.0591926_rk
     real(rk) :: volume
-    character(len=*), parameter :: w_vol = '(a,'//es//')'
     character(len=cl) :: gst_inp_file_name
     !
     write(stdout,'(a)') 'Writing test functions to odb ...'
@@ -219,25 +227,24 @@ contains
     !
     write(stdout,'(a)') 'Calculating volume for ellipsoid ...'
     ! Write to input file global subtets
-    if ( write_global_sub_tets_to_input_file ) then
+    if ( wrt_gst_inpf ) then
       n = len_trim(input_file_name)
       write(gst_inp_file_name,'(a,a,a)' ) input_file_name(1:n-4), &
-      &'_ellipsoid', '.odb'
+      &'_ellipsoid', '.inp'
       open(newunit=gst_inp_file,file=gst_inp_file_name,iostat=istat,&
-      &iomsg=emsg,action='write',status='new')
+      &iomsg=emsg,action='write',status='replace')
       if ( istat /= 0 ) return
     end if
     call calc_vol(s_1,volume,istat,emsg)
     if ( istat /= 0 ) return
-    write(stdout,w_vol) 'Relative error is: ', abs(volume- s_1_vol) /  s_1_vol
-    if ( write_global_sub_tets_to_input_file ) then
-      close(gst_inp_file)
-    end if
+    write(stdout,'(a,'//es//')') 'Calculated volume is: ', volume
+    write(stdout,'(a,'//es//')') 'Relative error is: ', abs(volume - &
+    & s_1_vol) /  s_1_vol
     !
-    write(stdout,'(a)') 'Calculating volume for torus ...'
-    call calc_vol(s_2,volume,istat,emsg)
-    if ( istat /= 0 ) return
-    write(stdout,w_vol) 'Relative error is: ', abs(volume- s_2_vol) /  s_2_vol
+!    write(stdout,'(a)') 'Calculating volume for torus ...'
+!    call calc_vol(s_2,volume,istat,emsg)
+!    if ( istat /= 0 ) return
+!    write(stdout,'(a,'//es//')') 'Relative error is: ', abs(volume- s_2_vol) /  s_2_vol
 
 
   end subroutine test_functions
