@@ -1,6 +1,6 @@
 module xtet
   use types
-  use tet_volume
+  use fe_c3d4
   use determinant
   implicit none
   private
@@ -14,7 +14,7 @@ contains
   subroutine set_sub_xtets(lsf,sub_tets,istat,emsg)
     !
     real(rk), intent(in) :: lsf(:)
-    type(tet_dat), allocatable, intent(out) :: sub_tets(:)
+    type(c3d4_t), allocatable, intent(out) :: sub_tets(:)
     integer(ik), intent(out) :: istat
     character(len=*), intent(out) :: emsg
     !
@@ -48,10 +48,10 @@ contains
       do i = 1, 4
         if (i==nod_in(1)) then
           ! Ohrani vozlisce s pozitivno lsf vrednostjo
-          sub_tets(1)%vert(i)%x = xi(i,:)
+          sub_tets(1)%nodes(i)%x = xi(i,:)
         else
           ! Delitev stranic
-          sub_tets(1)%vert(i)%x = xi(i,:) - ((xi(i,:) -  &
+          sub_tets(1)%nodes(i)%x = xi(i,:) - ((xi(i,:) -  &
           & xi(nod_in(1),:))/(lsf(i) - lsf(nod_in(1))))*lsf(i)
         endif
       end do
@@ -92,11 +92,11 @@ contains
       ! Definiranje treh tetraedrov, ki delijo osnovnega
 !*****************************************************************************80
       ! prvi tetraeder
-      sub_tets(1)%vert(1)%x = xi(nod_tet(1),:)
-      sub_tets(1)%vert(2)%x = xi(nod_tet(2),:)
-      sub_tets(1)%vert(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -  &
+      sub_tets(1)%nodes(1)%x = xi(nod_tet(1),:)
+      sub_tets(1)%nodes(2)%x = xi(nod_tet(2),:)
+      sub_tets(1)%nodes(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -  &
       & xi(nod_tet(3),:))/(lsf(nod_tet(1)) - lsf(nod_tet(3))))*lsf(nod_tet(1))
-      sub_tets(1)%vert(4)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -  &
+      sub_tets(1)%nodes(4)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -  &
       & xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
       call calc_tet_vol(sub_tets(1),volume,istat,emsg)
       call calc_tet_strech(sub_tets(1),volume,strech,istat,emsg)
@@ -106,12 +106,12 @@ contains
       end if
 !*****************************************************************************80
       ! drugi tetraeder
-      sub_tets(2-n_dealloc)%vert(1)%x = xi(nod_tet(2),:)
-      sub_tets(2-n_dealloc)%vert(2)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
+      sub_tets(2-n_dealloc)%nodes(1)%x = xi(nod_tet(2),:)
+      sub_tets(2-n_dealloc)%nodes(2)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
       & - xi(nod_tet(3),:))/(lsf(nod_tet(1)) - lsf(nod_tet(3))))*lsf(nod_tet(1))
-      sub_tets(2-n_dealloc)%vert(4)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
+      sub_tets(2-n_dealloc)%nodes(4)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
       & - xi(nod_tet(3),:))/(lsf(nod_tet(2)) - lsf(nod_tet(3))))*lsf(nod_tet(2))
-      sub_tets(2-n_dealloc)%vert(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
+      sub_tets(2-n_dealloc)%nodes(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
       call calc_tet_vol(sub_tets(2-n_dealloc),volume,istat,emsg)
       call calc_tet_strech(sub_tets(2-n_dealloc),volume,strech,istat,emsg)
@@ -121,12 +121,12 @@ contains
       end if
 !*****************************************************************************80
       ! tretji tetraeder
-      sub_tets(3-n_dealloc)%vert(1)%x = xi(nod_tet(2),:)
-      sub_tets(3-n_dealloc)%vert(2)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
+      sub_tets(3-n_dealloc)%nodes(1)%x = xi(nod_tet(2),:)
+      sub_tets(3-n_dealloc)%nodes(2)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
       & - xi(nod_tet(3),:))/(lsf(nod_tet(2)) - lsf(nod_tet(3))))*lsf(nod_tet(2))
-      sub_tets(3-n_dealloc)%vert(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
+      sub_tets(3-n_dealloc)%nodes(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
-      sub_tets(3-n_dealloc)%vert(4)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
+      sub_tets(3-n_dealloc)%nodes(4)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(2))
       call calc_tet_vol(sub_tets(3-n_dealloc),volume,istat,emsg)
       call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,istat,emsg)
@@ -160,10 +160,10 @@ contains
       ! Definiranje treh tetraedrov, ki delijo osnovnega
 !*****************************************************************************80
       ! prvi tetraeder
-      sub_tets(1)%vert(1)%x = xi(nod_tet(1),:)
-      sub_tets(1)%vert(2)%x = xi(nod_tet(2),:)
-      sub_tets(1)%vert(3)%x = xi(nod_tet(3),:)
-      sub_tets(1)%vert(4)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) - &
+      sub_tets(1)%nodes(1)%x = xi(nod_tet(1),:)
+      sub_tets(1)%nodes(2)%x = xi(nod_tet(2),:)
+      sub_tets(1)%nodes(3)%x = xi(nod_tet(3),:)
+      sub_tets(1)%nodes(4)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) - &
       &xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
 !*****************************************************************************80
       ! drugi tetraeder
@@ -173,11 +173,11 @@ contains
         call deallocate_tet(sub_tets, 1-n_dealloc)
         n_dealloc=n_dealloc+1
       end if
-      sub_tets(2-n_dealloc)%vert(1)%x = xi(nod_tet(2),:)
-      sub_tets(2-n_dealloc)%vert(2)%x = xi(nod_tet(3),:)
-      sub_tets(2-n_dealloc)%vert(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -&
+      sub_tets(2-n_dealloc)%nodes(1)%x = xi(nod_tet(2),:)
+      sub_tets(2-n_dealloc)%nodes(2)%x = xi(nod_tet(3),:)
+      sub_tets(2-n_dealloc)%nodes(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -&
       & xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
-      sub_tets(2-n_dealloc)%vert(4)%x = xi(nod_tet(3),:) - ((xi(nod_tet(3),:) -&
+      sub_tets(2-n_dealloc)%nodes(4)%x = xi(nod_tet(3),:) - ((xi(nod_tet(3),:) -&
       & xi(nod_tet(4),:))/(lsf(nod_tet(3)) - lsf(nod_tet(4))))*lsf(nod_tet(3))
       call calc_tet_vol(sub_tets(2-n_dealloc),volume,istat,emsg)
       call calc_tet_strech(sub_tets(2-n_dealloc),volume,strech,istat,emsg)
@@ -187,12 +187,12 @@ contains
       end if
 !*****************************************************************************80
       ! tretji tetraeder
-      sub_tets(3-n_dealloc)%vert(1)%x = xi(nod_tet(2),:)
-      sub_tets(3-n_dealloc)%vert(2)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -&
+      sub_tets(3-n_dealloc)%nodes(1)%x = xi(nod_tet(2),:)
+      sub_tets(3-n_dealloc)%nodes(2)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -&
       & xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
-      sub_tets(3-n_dealloc)%vert(3)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) -&
+      sub_tets(3-n_dealloc)%nodes(3)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) -&
       & xi(nod_tet(4),:))/(lsf(nod_tet(2)) - lsf(nod_tet(4))))*lsf(nod_tet(2))
-      sub_tets(3-n_dealloc)%vert(4)%x = xi(nod_tet(3),:) - ((xi(nod_tet(3),:) -&
+      sub_tets(3-n_dealloc)%nodes(4)%x = xi(nod_tet(3),:) - ((xi(nod_tet(3),:) -&
       xi(nod_tet(4),:))/(lsf(nod_tet(3)) - lsf(nod_tet(4))))*lsf(nod_tet(3))
       call calc_tet_vol(sub_tets(3-n_dealloc),volume,istat,emsg)
       call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,istat,emsg)
@@ -205,7 +205,7 @@ contains
       allocate(sub_tets(1),stat=istat,errmsg=emsg)
       if( istat /= 0 ) return
       do i1=1,4
-        sub_tets(1)%vert(i1)%x = xi(i1,:)
+        sub_tets(1)%nodes(i1)%x = xi(i1,:)
       end do
     end select
 !*****************************************************************************80

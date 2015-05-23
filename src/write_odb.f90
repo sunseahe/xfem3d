@@ -4,7 +4,7 @@ module write_odb
   use types
   use general_routines, only: f2c_char
   use read_input, only: input_file_name, fe_type, nodes, finite_elements
-  use tet_volume, only: dom, nver
+  use fe_c3d4, only: dom, nnod
   implicit none
   private
 !*****************************************************************************80
@@ -107,7 +107,7 @@ module write_odb
     nel = size(finite_elements)
     allocate(coordinates(nnod,dom),stat=istat,errmsg=emsg)
     if ( istat /= 0 ) return
-    allocate(connectivity(nel,nver),stat=istat,errmsg=emsg)
+    allocate(connectivity(nel,nnod),stat=istat,errmsg=emsg)
     if ( istat /= 0 ) return
     ! Copy
     do n = 1, nnod
@@ -122,7 +122,7 @@ module write_odb
     ! Write model data
     odb = model_data(c_odb_file_name,c_fe_type,int(dom,kind=c_int), &
     &int(nnod,kind=c_int),coordinates_ptr,int(nel,kind=c_int), &
-    & int(nver,kind=c_int),connectivity_ptr)
+    & int(nnod,kind=c_int),connectivity_ptr)
     !
   end subroutine write_model_data
 !*****************************************************************************80
@@ -209,6 +209,8 @@ module write_odb
     character(len=*), intent(out) :: emsg
     call close_odb(odb)
     odb = c_null_ptr
+    istat = 0
+    emsg = ''
   end subroutine close_odb_file
 !*****************************************************************************80
 end module write_odb

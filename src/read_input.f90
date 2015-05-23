@@ -2,20 +2,20 @@ module read_input
   use types
   use general_routines
   use tokenize_string, only: tokenize, comma, equal
-  use tet_volume, only: dom, nver, zero_pnt, point_3d_dat, point_3d_dat_ll, &
-  &  tet_dat, tet_dat_ll
+  use fe_c3d4, only: dom, nnod, zero_pnt, point_3d_t, point_3d_t_ll, &
+  &  c3d4_t, c3d4_t_ll
   implicit none
   private
 !*****************************************************************************80
   integer(ik) :: inp_file = 0
   character(len=cl) :: input_file_name = ''
   !
-  character(len=*), parameter :: fe_type = 'c3d4'
+  character(len=*), parameter :: fe_type = 'c3d10'
   !
   logical(lk) :: end_of_file = .false.
   !
-  type(point_3d_dat), allocatable :: nodes(:)
-  type(tet_dat), allocatable :: finite_elements(:)
+  type(point_3d_t), allocatable :: nodes(:)
+  type(c3d4_t), allocatable :: finite_elements(:)
 !*****************************************************************************80
   public :: inp_file, input_file_name, read_data, read_input_statistics
   public :: fe_type, nodes, finite_elements
@@ -113,8 +113,8 @@ module read_input
     real(rk) :: node_coo(dom)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
-    type(point_3d_dat) :: node
-    type(point_3d_dat_ll) :: nodes_ll
+    type(point_3d_t) :: node
+    type(point_3d_t_ll) :: nodes_ll
     !
     write(stdout,'(a)') 'Reading nodes ...'
     ra: do
@@ -140,7 +140,7 @@ module read_input
         call str2r(read_arg(i),node_coo(i-1),istat,emsg)
         if ( istat /= 0 ) return
       end do
-      node = point_3d_dat(node_coo)
+      node = point_3d_t(node_coo)
       call nodes_ll%add(node,istat,emsg); if ( istat /= 0 ) return
     end do ra
     ! Add nodes
@@ -161,11 +161,11 @@ module read_input
     !
     integer(ik) :: i, j
     integer(ik) :: rstat
-    integer(ik) :: el_conn(nver)
+    integer(ik) :: el_conn(nnod)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
-    type(tet_dat) :: fe_element
-    type(tet_dat_ll) :: fe_elements_ll
+    type(c3d4_t) :: fe_element
+    type(c3d4_t_ll) :: fe_elements_ll
     !
     write(stdout,'(a)') 'Reading connectivity ...'
     !
@@ -183,16 +183,16 @@ module read_input
       ! tokenize arguments
       call tokenize(inp_str,comma,read_arg,istat,emsg)
       if ( istat /= 0 ) return
-      if ( size(read_arg) /= nver + 1 ) then
+      if ( size(read_arg) /= nnod + 1 ) then
         istat = -1
         emsg = 'Read connectivity: Number of vertices is incorrect'
         return
       end if
-      do i = 2, nver + 1
+      do i = 2, nnod + 1
         call str2i(read_arg(i),el_conn(i-1),istat,emsg)
         if ( istat /= 0 ) return
       end do
-      fe_element = tet_dat(vert=zero_pnt,connectivity=el_conn)
+      fe_element = c3d4_t(nodes=zero_pnt,connectivity=el_conn)
       call fe_elements_ll%add(fe_element,istat,emsg)
       if ( istat /= 0 ) return
       !
@@ -204,8 +204,8 @@ module read_input
     ! Copy nodes to finite elements
     do i = 1, size(finite_elements)
       el_conn = finite_elements(i)%connectivity
-      do j = 1, nver
-        finite_elements(i)%vert(j) = nodes(el_conn(j))
+      do j = 1, nnod
+        finite_elements(i)%nodes(j) = nodes(el_conn(j))
       end do
     end do
     ! Sucess

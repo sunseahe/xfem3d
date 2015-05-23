@@ -25,7 +25,7 @@ CLFLAGSGCC =  -lstdc++ -Wl,-Bdynamic -L$(ABQROOT)/code/bin -lstandardB -lABQSMAO
 vpath %.cpp $(src_path)
 vpath %.f90 $(src_path)
 
-SRCF = types.f90 linked_list.f90 determinant.f90 tokenize_string.f90 lsf_test_functions.f90 tet_vol.f90 xfem_tetra.f90 read_input.f90 write_odb.f90 volume_integral.f90 main.f90
+SRCF = types.f90 linked_list.f90 determinant.f90 tokenize_string.f90 lsf_test_functions.f90 fe_c3d4.f90 fe_c3d10.f90 xfem_tetra.f90 read_input.f90 write_odb.f90 volume_integral.f90 main.f90
 SRCC = odb_routines.cpp
 
 #Objects

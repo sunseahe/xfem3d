@@ -1,6 +1,6 @@
 module volume_integral
   use types
-  use tet_volume, only: dom, nver, point_3d_dat, tet_dat, tet_dat_ll
+  use fe_c3d4, only: dom, nnod, point_3d_t, c3d4_t, c3d4_t_ll
   use read_input, only: nodes, finite_elements
   use xtet, only: set_sub_xtets
   use lsf_test_functions
@@ -43,7 +43,7 @@ contains
     call create_frame(step,'Ellipsoid',1,1.0_rk,&
     &istat,emsg)
     do e = 1, size(finite_elements)
-      do i = 1, nver
+      do i = 1, nnod
         x = finite_elements(e)%get_ver_coo(i)
         active_node = finite_elements(e)%connectivity(i)
         lsf_field(active_node) = s_1(x)
@@ -55,7 +55,7 @@ contains
     call create_frame(step,'Torus',2,2.0_rk,&
     &istat,emsg)
     do e = 1, size(finite_elements)
-      do i = 1, nver
+      do i = 1, nnod
         x = finite_elements(e)%get_ver_coo(i)
         active_node = finite_elements(e)%connectivity(i)
         lsf_field(active_node) = s_2(x)
@@ -67,7 +67,7 @@ contains
     call create_frame(step,'Genus two',3,3.0_rk,&
     &istat,emsg)
     do e = 1, size(finite_elements)
-      do i = 1, nver
+      do i = 1, nnod
         x = finite_elements(e)%get_ver_coo(i)
         active_node = finite_elements(e)%connectivity(i)
         lsf_field(active_node) = s_3(x)
@@ -79,7 +79,7 @@ contains
     call create_frame(step,'Genus seven',4,4.0_rk,&
     &istat,emsg)
     do e = 1, size(finite_elements)
-      do i = 1, nver
+      do i = 1, nnod
         x = finite_elements(e)%get_ver_coo(i)
         active_node = finite_elements(e)%connectivity(i)
         lsf_field(active_node) = s_4(x)
@@ -110,23 +110,23 @@ contains
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: e, i, t
-    integer(ik) :: connectivity_gst(nver)
+    integer(ik) :: connectivity_gst(nnod)
     integer(ik) :: count_gst ! Count global subtets
     real(rk) :: x(dom) ! Coordinates
-    real(rk) :: lsf(nver) ! Level set values
+    real(rk) :: lsf(nnod) ! Level set values
     real(rk) :: volume_tet ! Volume of a single tetrahedral
-    type(point_3d_dat) :: sub_tets_g_coo_pnts(nver)
-    type(tet_dat), allocatable :: sub_tets(:)
-    type(tet_dat) :: global_sub_tet
+    type(point_3d_t) :: sub_tets_g_coo_pnts(nnod)
+    type(c3d4_t), allocatable :: sub_tets(:)
+    type(c3d4_t) :: global_sub_tet
     ! For writing in input file and checking global sub tets
-    type(tet_dat), allocatable :: global_sub_tets(:)
-    type(tet_dat_ll) :: global_sub_tets_ll
+    type(c3d4_t), allocatable :: global_sub_tets(:)
+    type(c3d4_t_ll) :: global_sub_tets_ll
     !
     volume = 0.0_rk
     count_gst = 0
     elements: do e = 1, size(finite_elements)
       ! Get element coordinates and calculate lsf
-      do i = 1, nver
+      do i = 1, nnod
         x = finite_elements(e)%get_ver_coo(i)
         lsf(i) = test_fun(x)
       end do
@@ -144,8 +144,8 @@ contains
         !write(stdout,'(a,i0,a)') 'Sub tet ', t, ' local coordinates'
         !call sub_tets(t)%write()
         ! Global coordinates for
-        do i = 1, nver
-          call finite_elements(e)%g_coo(xi_coo_pnt=sub_tets(t)%vert(i),&
+        do i = 1, nnod
+          call finite_elements(e)%g_coo(xi_coo_pnt=sub_tets(t)%nodes(i),&
           &g_coo_pnt=sub_tets_g_coo_pnts(i),istat=istat,emsg=emsg)
           if ( istat /= 0 ) then
             write(stdout,'(a,i0)') 'Element number: ', e
@@ -157,10 +157,10 @@ contains
           end if
         end do
         ! Global_sub_tet
-        do i = 1, nver
-          connectivity_gst(i) = nver * count_gst + i
+        do i = 1, nnod
+          connectivity_gst(i) = nnod * count_gst + i
         end do
-        global_sub_tet = tet_dat(vert=sub_tets_g_coo_pnts,connectivity=&
+        global_sub_tet = c3d4_t(nodes=sub_tets_g_coo_pnts,connectivity=&
         &connectivity_gst)
         !write(stdout,'(a,i0,a)') 'Sub tet ', t, ' global coordinates'
         !call global_sub_tet%write()
@@ -190,7 +190,7 @@ contains
       ! Write nodes
       write(gst_inp_file,fmt='(a)') '*node'
       do e = 1, size(global_sub_tets)
-        do i = 1, nver
+        do i = 1, nnod
           x = global_sub_tets(e)%get_ver_coo(i)
           write(gst_inp_file,fmt='(i0,",",3('//es//',:,","))') &
           & global_sub_tets(e)%connectivity(i), x
@@ -225,21 +225,21 @@ contains
     call write_test_functions(istat,emsg)
     if( istat /= 0 ) return
     !
-    write(stdout,'(a)') 'Calculating volume for ellipsoid ...'
+    !write(stdout,'(a)') 'Calculating volume for ellipsoid ...'
     ! Write to input file global subtets
-    if ( wrt_gst_inpf ) then
-      n = len_trim(input_file_name)
-      write(gst_inp_file_name,'(a,a,a)' ) input_file_name(1:n-4), &
-      &'_ellipsoid', '.inp'
-      open(newunit=gst_inp_file,file=gst_inp_file_name,iostat=istat,&
-      &iomsg=emsg,action='write',status='replace')
-      if ( istat /= 0 ) return
-    end if
-    call calc_vol(s_1,volume,istat,emsg)
-    if ( istat /= 0 ) return
-    write(stdout,'(a,'//es//')') 'Calculated volume is: ', volume
-    write(stdout,'(a,'//es//')') 'Relative error is: ', abs(volume - &
-    & s_1_vol) /  s_1_vol
+!    if ( wrt_gst_inpf ) then
+!      n = len_trim(input_file_name)
+!      write(gst_inp_file_name,'(a,a,a)' ) input_file_name(1:n-4), &
+!      &'_ellipsoid', '.inp'
+!      open(newunit=gst_inp_file,file=gst_inp_file_name,iostat=istat,&
+!      &iomsg=emsg,action='write',status='replace')
+!      if ( istat /= 0 ) return
+!    end if
+!    call calc_vol(s_1,volume,istat,emsg)
+!    if ( istat /= 0 ) return
+!    write(stdout,'(a,'//es//')') 'Calculated volume is: ', volume
+!    write(stdout,'(a,'//es//')') 'Relative error is: ', abs(volume - &
+!    & s_1_vol) /  s_1_vol
     !
 !    write(stdout,'(a)') 'Calculating volume for torus ...'
 !    call calc_vol(s_2,volume,istat,emsg)

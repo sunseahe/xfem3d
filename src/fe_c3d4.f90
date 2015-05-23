@@ -1,4 +1,4 @@
-module tet_volume
+module fe_c3d4
   use types
   use determinant
   use ll
@@ -7,9 +7,11 @@ module tet_volume
   private
 !*****************************************************************************80
   integer(ik), parameter :: dom = 3
-  integer(ik), parameter :: nver = 4
+  integer(ik), parameter :: nnod = 4
 !*****************************************************************************80
-  type :: point_3d_dat
+! Point
+!*****************************************************************************80
+  type :: point_3d_t
     real(rk) :: x(dom) = 0.0_rk
   contains
     procedure :: subtract_pnt
@@ -19,47 +21,49 @@ module tet_volume
     generic :: operator(.dot.) => dot_pnt
     generic :: assignment(=) => assign_pnt
     procedure :: write => write_pnt
-  end type point_3d_dat
-  type, extends(list) :: point_3d_dat_ll
+  end type point_3d_t
+  type, extends(list) :: point_3d_t_ll
     private
   contains
-    procedure :: add => add_point_3d_dat_ll
-    procedure :: fill_array => fill_array_point_3d_dat_ll
-  end type point_3d_dat_ll
+    procedure :: add => add_point_3d_t_ll
+    procedure :: fill_array => fill_array_point_3d_t_ll
+  end type point_3d_t_ll
 !*****************************************************************************80
-  type(point_3d_dat), parameter :: zero_pnt = point_3d_dat([0.0_rk,0.0_rk, &
+  type(point_3d_t), parameter :: zero_pnt = point_3d_t([0.0_rk,0.0_rk, &
   &0.0_rk])
   integer(ik), parameter :: ngp_c3d4 = 1
   real(rk), parameter :: gp_c3d4 = 1.0_rk / 4.0_rk, w_c3d4 = 1.0_rk / 6.0_rk
 !*****************************************************************************80
-  type :: tet_dat
-    type(point_3d_dat) :: vert(nver) = zero_pnt
-    integer(ik) :: connectivity(nver) = 0
+! c3d4
+!*****************************************************************************80
+  type :: c3d4_t
+    type(point_3d_t) :: nodes(nnod) = zero_pnt
+    integer(ik) :: connectivity(nnod) = 0
   contains
     procedure :: get_ver_coo => get_ver_coo_tet
     procedure, nopass :: n_mtx_sca => n_mtx_sca_tet
     procedure :: g_coo => g_coo_tet
     procedure :: volume => calculate_tetrahedral_volume
     procedure :: write => write_tet
-  end type tet_dat
-  type, extends(list) :: tet_dat_ll
+  end type c3d4_t
+  type, extends(list) :: c3d4_t_ll
     private
   contains
-    procedure :: add => add_tet_dat_ll
-    procedure :: fill_array => fill_array_tet_dat_ll
-  end type tet_dat_ll
+    procedure :: add => add_c3d4_t_ll
+    procedure :: fill_array => fill_array_c3d4_t_ll
+  end type c3d4_t_ll
 !*****************************************************************************80
-  public :: dom, nver, zero_pnt
-  public :: point_3d_dat, point_3d_dat_ll, tet_dat, tet_dat_ll, &
+  public :: dom, nnod, zero_pnt
+  public :: point_3d_t, point_3d_t_ll, c3d4_t, c3d4_t_ll, &
   & calc_tet_vol, deallocate_tet, calc_tet_strech
 !*****************************************************************************80
   contains
 !*****************************************************************************80
   pure subroutine deallocate_tet(tets, n)
-    type(tet_dat), intent(inout), allocatable :: tets(:)
+    type(c3d4_t), intent(inout), allocatable :: tets(:)
     integer(ik), intent(in) :: n
     !
-    type(tet_dat), allocatable :: alt_tets(:)
+    type(c3d4_t), allocatable :: alt_tets(:)
     integer(ik) :: n_len, k, i
     !
     n_len=size(tets)
@@ -84,7 +88,7 @@ module tet_volume
 !Racunanje volumna tetraedra
 !*****************************************************************************80
   pure subroutine calc_tet_vol(tet,volume,istat,emsg)
-    type(tet_dat), intent(in) :: tet
+    type(c3d4_t), intent(in) :: tet
     real(rk), intent(out) :: volume
     integer(ik), intent(out) :: istat
     character(len=*), intent(out) :: emsg
@@ -92,15 +96,15 @@ module tet_volume
     integer(ik) :: i, j
     real(rk) :: det
     real(rk) :: det_mtx(dom,dom)
-    type(point_3d_dat), parameter :: e(dom) = [ &
-    & point_3d_dat([1.0_rk,0.0_rk,0.0_rk]), &
-    & point_3d_dat([0.0_rk,1.0_rk,0.0_rk]), &
-    & point_3d_dat([0.0_rk,0.0_rk,1.0_rk]) ]
+    type(point_3d_t), parameter :: e(dom) = [ &
+    & point_3d_t([1.0_rk,0.0_rk,0.0_rk]), &
+    & point_3d_t([0.0_rk,1.0_rk,0.0_rk]), &
+    & point_3d_t([0.0_rk,0.0_rk,1.0_rk]) ]
     !
     volume = 0.0_rk
     do i = 1, dom
       do j = 1, dom
-        det_mtx(i,j) = (tet%vert(j+1) - tet%vert(1)) .dot. e(i)
+        det_mtx(i,j) = (tet%nodes(j+1) - tet%nodes(1)) .dot. e(i)
       end do
     end do
     ! Calculate determinant
@@ -117,7 +121,7 @@ module tet_volume
 ! Tetrahedral volume - type bound procedure
 !*****************************************************************************80
   pure subroutine calculate_tetrahedral_volume(self,volume,istat,emsg)
-    class(tet_dat), intent(in) :: self
+    class(c3d4_t), intent(in) :: self
     real(rk), intent(out) :: volume
     integer(ik), intent(out) :: istat
     character(len=*), intent(out) :: emsg
@@ -125,15 +129,15 @@ module tet_volume
     integer(ik) :: i, j
     real(rk) :: det
     real(rk) :: det_mtx(dom,dom)
-    type(point_3d_dat), parameter :: e(dom) = [ &
-    & point_3d_dat([1.0_rk,0.0_rk,0.0_rk]), &
-    & point_3d_dat([0.0_rk,1.0_rk,0.0_rk]), &
-    & point_3d_dat([0.0_rk,0.0_rk,1.0_rk]) ]
+    type(point_3d_t), parameter :: e(dom) = [ &
+    & point_3d_t([1.0_rk,0.0_rk,0.0_rk]), &
+    & point_3d_t([0.0_rk,1.0_rk,0.0_rk]), &
+    & point_3d_t([0.0_rk,0.0_rk,1.0_rk]) ]
     !
     volume = 0.0_rk
     do i = 1, dom
       do j = 1, dom
-        det_mtx(i,j) = (self%vert(j+1) - self%vert(1)) .dot. e(i)
+        det_mtx(i,j) = (self%nodes(j+1) - self%nodes(1)) .dot. e(i)
       end do
     end do
     ! Calculate determinant
@@ -149,7 +153,7 @@ module tet_volume
 !*****************************************************************************80
 !Racunanje deformiranosti tetraedra
   pure subroutine calc_tet_strech(tet,volume,strech,istat,emsg)
-    type(tet_dat), intent(in) :: tet
+    type(c3d4_t), intent(in) :: tet
     real(rk), intent(in) :: volume
     real(rk), intent(out) :: strech
     integer(ik), intent(out) :: istat
@@ -158,15 +162,15 @@ module tet_volume
     integer(ik) :: i, j
     integer(ik) :: pnts(6)
     real(rk) :: len_a(3), s, len_max, area
-    type(point_3d_dat) :: a(3)
+    type(point_3d_t) :: a(3)
     !
     area=0.0_rk
     pnts(1)=1; pnts(2)=2; pnts(3)=3; pnts(4)=4; pnts(5)=1; pnts(6)=2;
     do i = 1, 4
        len_a=0.0_rk; s=0.0_rk; len_max=0.0_rk
-       a(1)=tet%vert(pnts(i))-tet%vert(pnts(i+1))
-       a(2)=tet%vert(pnts(i+1))-tet%vert(pnts(i+2))
-       a(3)=tet%vert(pnts(i+2))-tet%vert(pnts(i))
+       a(1)=tet%nodes(pnts(i))-tet%nodes(pnts(i+1))
+       a(2)=tet%nodes(pnts(i+1))-tet%nodes(pnts(i+2))
+       a(3)=tet%nodes(pnts(i+2))-tet%nodes(pnts(i))
        do j=1,3
          len_a(j)=len_pnt(a(j))
          if (len_a(j).gt.len_max) len_max=len_a(j)
@@ -182,54 +186,54 @@ module tet_volume
   end subroutine calc_tet_strech
 !*****************************************************************************80
   pure function subtract_pnt(self,other) result(res)
-    class(point_3d_dat), intent(in) :: self
-    type(point_3d_dat), intent(in) :: other
-    type(point_3d_dat) :: res
+    class(point_3d_t), intent(in) :: self
+    type(point_3d_t), intent(in) :: other
+    type(point_3d_t) :: res
     real(rk) :: sub(dom)
     sub = self%x - other%x
-    res = point_3d_dat(sub)
+    res = point_3d_t(sub)
   end function subtract_pnt
 !*****************************************************************************80
   pure function dot_pnt(self,other) result(res)
-    class(point_3d_dat), intent(in) :: self
-    type(point_3d_dat), intent(in) :: other
+    class(point_3d_t), intent(in) :: self
+    type(point_3d_t), intent(in) :: other
     real(rk) :: res
     res = sum(self%x * other%x)
   end function dot_pnt
 !*****************************************************************************80
   pure function len_pnt(self) result(res)
-    class(point_3d_dat), intent(in) :: self
+    class(point_3d_t), intent(in) :: self
     real(rk) :: res
     res = sqrt(sum(self%x * self%x))
   end function len_pnt
 !*****************************************************************************80
   pure subroutine assign_pnt(self,other)
-    class(point_3d_dat), intent(inout) :: self
-    type(point_3d_dat), intent(in) :: other
+    class(point_3d_t), intent(inout) :: self
+    type(point_3d_t), intent(in) :: other
     self%x = other%x
   end subroutine assign_pnt
 !*****************************************************************************80
   subroutine write_pnt(self)
-    class(point_3d_dat), intent(in) :: self
+    class(point_3d_t), intent(in) :: self
     character(len=*), parameter :: pw = '(a,3(' // &
     &es//',:,","))'
     write(stdout,pw,advance='no') 'Point coordinates: (', self%x
     write(stdout,'(a)') ' )'
   end subroutine write_pnt
 !*****************************************************************************80
-  pure subroutine add_point_3d_dat_ll(self,arg,istat,emsg)
-    class(point_3d_dat_ll), intent(inout) :: self
-    type(point_3d_dat), intent(in) :: arg
+  pure subroutine add_point_3d_t_ll(self,arg,istat,emsg)
+    class(point_3d_t_ll), intent(inout) :: self
+    type(point_3d_t), intent(in) :: arg
     integer(ik), intent(out) :: istat
     character(len=*), intent(out) :: emsg
     !
     call self%add_list(arg,istat,emsg)
     !
-  end subroutine add_point_3d_dat_ll
+  end subroutine add_point_3d_t_ll
 !*****************************************************************************80
-  pure subroutine fill_array_point_3d_dat_ll(self,arr,istat,emsg)
-    class(point_3d_dat_ll), intent(inout) :: self
-    type(point_3d_dat), allocatable, intent(out) :: arr(:)
+  pure subroutine fill_array_point_3d_t_ll(self,arr,istat,emsg)
+    class(point_3d_t_ll), intent(inout) :: self
+    type(point_3d_t), allocatable, intent(out) :: arr(:)
     integer(ik), intent(out) :: istat
     character(len=*), intent(out) :: emsg
     !
@@ -252,7 +256,7 @@ module tet_volume
       allocate(curr,source=self%get_current(),stat=istat,errmsg=emsg)
       if( istat /= 0 ) return
       select type(curr)
-      type is( point_3d_dat )
+      type is( point_3d_t )
         arr(i) = curr
       class default
         istat = -1
@@ -261,32 +265,32 @@ module tet_volume
       end select
       call self%set_next()
     end do
-  end subroutine fill_array_point_3d_dat_ll
+  end subroutine fill_array_point_3d_t_ll
 !*****************************************************************************80
 ! Get vert coordinates
 !*****************************************************************************80
   pure function get_ver_coo_tet(self,n) result(coo)
-    class(tet_dat), intent(in) :: self
+    class(c3d4_t), intent(in) :: self
     integer(ik), intent(in) :: n
     real(rk) :: coo(dom)
     !
-    if (n > nver ) then
+    if (n > nnod ) then
       coo = 0.0_rk
       return
     end if
-    coo = self%vert(n)%x
+    coo = self%nodes(n)%x
     !
   end function get_ver_coo_tet
 !*****************************************************************************80
   subroutine write_tet(self)
-    class(tet_dat), intent(in) :: self
+    class(c3d4_t), intent(in) :: self
     !
     integer(ik) :: i
     !
-    write(stdout,'(a)') 'Tetrahedral coordinates:'
-    do i = 1, nver
+    write(stdout,'(a)') 'C3d4 coordinates:'
+    do i = 1, nnod
       write(stdout,'(i0,a)',advance='no') i, '. '
-      call self%vert(i)%write()
+      call self%nodes(i)%write()
     end do
     !
   end subroutine write_tet
@@ -312,7 +316,7 @@ module tet_volume
         & be excluded'
         return
       end if
-      if ( .not. size(n_mtx_sca)==nver ) then
+      if ( .not. size(n_mtx_sca)==nnod ) then
         istat = -1
         emsg ='N matrix scalar tet: N matrix size incorrect'
         return
@@ -357,16 +361,16 @@ module tet_volume
 !*****************************************************************************80
   pure subroutine g_coo_tet(self,gp_num,xi_coo_pnt,g_coo_pnt,istat,emsg)
     use blas95, only: gemv
-    class(tet_dat), intent(in) :: self
+    class(c3d4_t), intent(in) :: self
     integer(ik), optional, intent(in) :: gp_num
-    type(point_3d_dat), optional, intent(in) :: xi_coo_pnt
-    type(point_3d_dat), intent(out) :: g_coo_pnt
+    type(point_3d_t), optional, intent(in) :: xi_coo_pnt
+    type(point_3d_t), intent(out) :: g_coo_pnt
     integer(ik), intent(out) :: istat
     character(len=cl), intent(out) :: emsg
     !
     integer(ik) :: i
-    real(rk) :: xi(dom), n_mtx_sca(nver)
-    real(rk) :: el_coo(nver,dom), g_coo(dom), xi_coo(dom)
+    real(rk) :: xi(dom), n_mtx_sca(nnod)
+    real(rk) :: el_coo(nnod,dom), g_coo(dom), xi_coo(dom)
     logical(lk) :: gp_num_p, xi_coo_p
     !
     gp_num_p = present(gp_num); xi_coo_p = present(xi_coo_pnt)
@@ -404,32 +408,32 @@ module tet_volume
       xi = xi_coo
     end if
     ! Calculate
-    do i = 1, nver
+    do i = 1, nnod
       el_coo(i,:) = self%get_ver_coo(i)
     end do
     call self%n_mtx_sca(xi_coo=xi,n_mtx_sca=n_mtx_sca,istat=istat,&
     &emsg=emsg)
     call gemv(transpose(el_coo),n_mtx_sca,g_coo)
-    g_coo_pnt = point_3d_dat(g_coo)
+    g_coo_pnt = point_3d_t(g_coo)
     ! Sucess
     istat = 0
     emsg = ''
     !
   end subroutine g_coo_tet
 !*****************************************************************************80
-  pure subroutine add_tet_dat_ll(self,arg,istat,emsg)
-    class(tet_dat_ll), intent(inout) :: self
-    type(tet_dat), intent(in) :: arg
+  pure subroutine add_c3d4_t_ll(self,arg,istat,emsg)
+    class(c3d4_t_ll), intent(inout) :: self
+    type(c3d4_t), intent(in) :: arg
     integer(ik), intent(out) :: istat
     character(len=*), intent(out) :: emsg
     !
     call self%add_list(arg,istat,emsg)
     !
-  end subroutine add_tet_dat_ll
+  end subroutine add_c3d4_t_ll
 !*****************************************************************************80
-  pure subroutine fill_array_tet_dat_ll(self,arr,istat,emsg)
-    class(tet_dat_ll), intent(inout) :: self
-    type(tet_dat), allocatable, intent(out) :: arr(:)
+  pure subroutine fill_array_c3d4_t_ll(self,arr,istat,emsg)
+    class(c3d4_t_ll), intent(inout) :: self
+    type(c3d4_t), allocatable, intent(out) :: arr(:)
     integer(ik), intent(out) :: istat
     character(len=*), intent(out) :: emsg
     !
@@ -452,7 +456,7 @@ module tet_volume
       allocate(curr,source=self%get_current(),stat=istat,errmsg=emsg)
       if( istat /= 0 ) return
       select type(curr)
-      type is( tet_dat )
+      type is( c3d4_t )
         arr(i) = curr
       class default
         istat = -1
@@ -461,7 +465,7 @@ module tet_volume
       end select
       call self%set_next()
     end do
-  end subroutine fill_array_tet_dat_ll
+  end subroutine fill_array_c3d4_t_ll
 !*****************************************************************************80
-end module tet_volume
+end module fe_c3d4
 
