@@ -59,29 +59,29 @@ module ll
 !*****************************************************************************80
 contains
   !
-  pure subroutine add_list(self,any_item,istat,emsg)
+  pure subroutine add_list(self,any_item,esta,emsg)
     class(list), intent(inout) :: self
     class(*), intent(in) :: any_item
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     if ( .not. associated(self%head) ) then
-      allocate(self%head,stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(self%head,stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       self%tail => self%head
-      allocate(self%tail%any_item,source=any_item,stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(self%tail%any_item,source=any_item,stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       self%nitem = self%nitem + 1
     else
-      allocate(self%tail%next,stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(self%tail%next,stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       self%tail => self%tail%next
       self%tail%next => null()
-      allocate(self%tail%any_item,source=any_item,stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(self%tail%any_item,source=any_item,stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       self%nitem = self%nitem + 1
     end if
-    istat = 0
+    esta = 0
     emsg = ''
     !
   end subroutine add_list
@@ -129,9 +129,9 @@ contains
     self%current => self%current%next
   end subroutine set_next
   !
-  pure subroutine clean(self,istat,emsg)
+  pure subroutine clean(self,esta,emsg)
     class(list), intent(inout) :: self
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     type(link), pointer :: current, next
@@ -140,8 +140,8 @@ contains
     current => self%head
     next => current%next
     do
-      deallocate(current,stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      deallocate(current,stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       current => next
       if( .not. associated(current) ) exit
       next => current%next
@@ -151,50 +151,50 @@ contains
     self%tail => null()
     self%nitem = 0
     !
-    istat = 0
+    esta = 0
     emsg = ''
     !
   end subroutine clean
 !*****************************************************************************80
-  pure subroutine add_char_ll(self,arg,istat,emsg)
+  pure subroutine add_char_ll(self,arg,esta,emsg)
     class(char_ll), intent(inout) :: self
     character(len=*), intent(in) :: arg
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    call self%add_list(arg,istat,emsg)
+    call self%add_list(arg,esta,emsg)
     !
   end subroutine add_char_ll
 !*****************************************************************************80
-  pure subroutine fill_array_char_ll(self,arr,istat,emsg)
+  pure subroutine fill_array_char_ll(self,arr,esta,emsg)
     class(char_ll), intent(inout) :: self
     character(len=cl), allocatable, intent(out) :: arr(:)
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer :: i
     class(*), allocatable :: curr
     !
     if ( self%is_empty() ) then
-      istat = -1
+      esta = -1
       emsg = 'List is empty'
       return
     end if
-    allocate(arr(self%get_nitem()),stat=istat,errmsg=emsg)
-    if( istat /= 0 ) return
+    allocate(arr(self%get_nitem()),stat=esta,errmsg=emsg)
+    if( esta /= 0 ) return
     call self%reset()
     do i = 1, self%get_nitem()
       if(allocated(curr)) then
-        deallocate(curr,stat=istat,errmsg=emsg)
-        if( istat /= 0 ) return
+        deallocate(curr,stat=esta,errmsg=emsg)
+        if( esta /= 0 ) return
       end if
-      allocate(curr,source=self%get_current(),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       select type(curr)
       type is( character(*) )
         arr(i) = curr
       class default
-        istat = -1
+        esta = -1
         emsg = 'Wrong linked list item.'
         return
       end select
@@ -202,53 +202,45 @@ contains
     end do
   end subroutine fill_array_char_ll
 !*****************************************************************************80
-  pure subroutine add_integer_ll(self,arg,arg_arr,istat,emsg)
+  pure subroutine add_integer_ll(self,arg,esta,emsg)
     class(integer_ll), intent(inout) :: self
-    integer(ik), optional, intent(in) :: arg
-    integer(ik), optional, intent(in) :: arg_arr(:)
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(in) :: arg
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    if ( present(arg) ) then
-      call self%add_list(arg,istat,emsg)
-    else if( present(arg_arr) ) then
-    else
-      istat = -1
-      emsg = 'Integer linked list: incorrect input arguments'
-      return
-    end if
+    call self%add_list(arg,esta,emsg)
     !
   end subroutine add_integer_ll
 !*****************************************************************************80
-  pure subroutine fill_array_integer_ll(self,arr,istat,emsg)
+  pure subroutine fill_array_integer_ll(self,arr,esta,emsg)
     class(integer_ll), intent(inout) :: self
     integer(ik), allocatable, intent(out) :: arr(:)
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer :: i
     class(*), allocatable :: curr
     !
     if ( self%is_empty() ) then
-      istat = -1
+      esta = -1
       emsg = 'List is empty'
       return
     end if
-    allocate(arr(self%get_nitem()),stat=istat,errmsg=emsg)
-    if( istat /= 0 ) return
+    allocate(arr(self%get_nitem()),stat=esta,errmsg=emsg)
+    if( esta /= 0 ) return
     call self%reset()
     do i = 1, self%get_nitem()
       if(allocated(curr)) then
-        deallocate(curr,stat=istat,errmsg=emsg)
-        if( istat /= 0 ) return
+        deallocate(curr,stat=esta,errmsg=emsg)
+        if( esta /= 0 ) return
       end if
-      allocate(curr,source=self%get_current(),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       select type(curr)
       type is( integer(ik) )
         arr(i) = curr
       class default
-        istat = -1
+        esta = -1
         emsg = 'Wrong linked list item.'
         return
       end select
@@ -256,62 +248,46 @@ contains
     end do
   end subroutine fill_array_integer_ll
 !*****************************************************************************80
-  pure subroutine add_real_ll(self,arg,arg_arr,istat,emsg)
+  pure subroutine add_real_ll(self,arg,esta,emsg)
     class(real_ll), intent(inout) :: self
-    real(rk), optional, intent(in) :: arg
-    real(rk), optional, intent(in) :: arg_arr(:)
-    integer(ik), intent(out) :: istat
+    real(rk), intent(in) :: arg
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    type(real_arr_t) :: real_arr
-    !
-    if ( present(arg) ) then
-      call self%add_list(arg,istat,emsg)
-    else if( present(arg_arr) ) then
-      istat = -1
-      emsg = 'Real linked list: not implemented'
-      return
-      allocate(real_arr%dat(size(arg_arr)),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
-      call self%add_list(real_arr,istat,emsg)
-    else
-      istat = -1
-      emsg = 'Real linked list: incorrect input arguments'
-      return
-    end if
+    call self%add_list(arg,esta,emsg)
     !
   end subroutine add_real_ll
 !*****************************************************************************80
-  pure subroutine fill_array_real_ll(self,arr,istat,emsg)
+  pure subroutine fill_array_real_ll(self,arr,esta,emsg)
     class(real_ll), intent(inout) :: self
     real(rk), allocatable, intent(out) :: arr(:)
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer :: i
     class(*), allocatable :: curr
     !
     if ( self%is_empty() ) then
-      istat = -1
+      esta = -1
       emsg = 'Real linked list: list is empty'
       return
     end if
-    allocate(arr(self%get_nitem()),stat=istat,errmsg=emsg)
-    if( istat /= 0 ) return
+    allocate(arr(self%get_nitem()),stat=esta,errmsg=emsg)
+    if( esta /= 0 ) return
     !
     call self%reset()
     do i = 1, self%get_nitem()
       if(allocated(curr)) then
-        deallocate(curr,stat=istat,errmsg=emsg)
-        if( istat /= 0 ) return
+        deallocate(curr,stat=esta,errmsg=emsg)
+        if( esta /= 0 ) return
       end if
-      allocate(curr,source=self%get_current(),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       select type(curr)
       type is( real(rk) )
         arr(i) = curr
       class default
-        istat = -1
+        esta = -1
         emsg = 'Real linked list: wrong linked list item.'
         return
       end select

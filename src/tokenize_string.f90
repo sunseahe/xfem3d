@@ -15,11 +15,11 @@ module tokenize_string
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine tokenize(str,delimiter,words,istat,emsg)
+  subroutine tokenize(str,delimiter,words,esta,emsg)
     character(len=*), intent(in) :: str
     character(len=1), intent(in) :: delimiter
     character(len=cl), allocatable, intent(out) :: words(:)
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
     !
     integer(ik) :: i, ns, pos1
@@ -37,8 +37,8 @@ contains
         if( pos1 > 1 ) then
           if( len_trim(current_word) /= 0 ) then
             current_word = adjustl(current_word)
-            call words_list%add(current_word,istat,emsg)
-            if( istat /= 0 ) return
+            call words_list%add(current_word,esta,emsg)
+            if( esta /= 0 ) return
           end if
         end if
         current_word = ''
@@ -48,22 +48,22 @@ contains
     ! Set the last word if not empty string
     if( len_trim(current_word) /= 0 ) then
       current_word = adjustl(current_word)
-      call words_list%add(current_word,istat,emsg)
-      if( istat /= 0 ) return
+      call words_list%add(current_word,esta,emsg)
+      if( esta /= 0 ) return
     end if
     ! Copy to array
     if( .not. words_list%is_empty() ) then
-      call words_list%fill_array(words,istat,emsg)
-      if( istat /= 0 ) return
+      call words_list%fill_array(words,esta,emsg)
+      if( esta /= 0 ) return
       ! Empty list
-      call words_list%clean(istat,emsg)
-      if( istat /= 0 ) return
+      call words_list%clean(esta,emsg)
+      if( esta /= 0 ) return
       ! Sucess
-      istat = 0
+      esta = 0
       emsg = ''
     else
       ! Empty list
-      istat = 1
+      esta = 1
       emsg = 'Tokenize: empty list'
     end if
     !

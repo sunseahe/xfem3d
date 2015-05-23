@@ -48,11 +48,11 @@ contains
 !*****************************************************************************80
 ! Print error
 !*****************************************************************************80
-  subroutine print_error(istat,emsg)
-    integer(ik), intent(in) :: istat
+  subroutine print_error(esta,emsg)
+    integer(ik), intent(in) :: esta
     character(len=*), intent(in) :: emsg
     !
-    write(stderr,'(a,i0)') 'Error number: ', istat
+    write(stderr,'(a,i0)') 'Error number: ', esta
     write(stderr,'(a,a)') 'Error reason: ', trim(emsg)
     stop -1
     !
@@ -73,10 +73,10 @@ contains
 !*****************************************************************************80
 ! String to integer
 !*****************************************************************************80
-  pure subroutine str2i(str,iout,istat,emsg)
+  pure subroutine str2i(str,iout,esta,emsg)
     character(len=*), intent(in) :: str
     integer(ik), intent(out) :: iout
-    integer, intent(out) :: istat
+    integer, intent(out) :: esta
     character(len=cl), intent(out) :: emsg
     !
     character(len=cl) :: tmp_str, f
@@ -84,10 +84,10 @@ contains
     !
     tmp_str = adjustl(str)
     n = len_trim(tmp_str)
-    write(unit=f,fmt='("(i",i0,")")',iostat=istat, &
+    write(unit=f,fmt='("(i",i0,")")',iostat=esta, &
     &iomsg=emsg) n
     iout = 0_ik
-    read(unit=tmp_str,fmt=f,iostat=istat,iomsg=emsg) iout
+    read(unit=tmp_str,fmt=f,iostat=esta,iomsg=emsg) iout
     !
   end subroutine str2i
   pure character(len=cl) function i2str(i)
@@ -97,10 +97,10 @@ contains
 !*****************************************************************************80
 ! String to real
 !*****************************************************************************80
-  pure subroutine str2r(str,rout,istat,emsg)
+  pure subroutine str2r(str,rout,esta,emsg)
     character(len=*), intent(in) :: str
     real(rk), intent(out) :: rout
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
     !
     character(len=cl) :: tmp_str, f
@@ -110,13 +110,13 @@ contains
     n = len_trim(tmp_str)
     dot = index(tmp_str, '.')
     if( dot < 1 ) then
-      write(unit=f,fmt='("(f",i0,".0)")',iostat=istat,iomsg=emsg) n
+      write(unit=f,fmt='("(f",i0,".0)")',iostat=esta,iomsg=emsg) n
     else
-      write(unit=f,fmt='("(f",i0,".",i0,")")',iostat=istat, &
+      write(unit=f,fmt='("(f",i0,".",i0,")")',iostat=esta, &
       &iomsg=emsg) n, n - dot
     end if
     rout = 0.0e0_rk
-    read(unit=tmp_str,fmt=f,iostat=istat,iomsg=emsg) rout
+    read(unit=tmp_str,fmt=f,iostat=esta,iomsg=emsg) rout
     !
   end subroutine str2r
   pure character(len=cl) function r2str(r)
@@ -157,19 +157,19 @@ contains
 !*****************************************************************************80
 ! Convert to c characters
 !*****************************************************************************80
-  pure subroutine f2c_char(f_char_in,c_char_out,istat,emsg)
+  pure subroutine f2c_char(f_char_in,c_char_out,esta,emsg)
     use iso_c_binding, only: c_char, c_null_char
     character(len=*), intent(in) :: f_char_in
     character(len=1,kind=c_char), &
     & allocatable, intent(out) :: c_char_out(:)
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer :: n, i
     !
     n = len_trim(f_char_in)
-    allocate(c_char_out(n+1),stat=istat,errmsg=emsg)
-    if( istat /= 0 ) return
+    allocate(c_char_out(n+1),stat=esta,errmsg=emsg)
+    if( esta /= 0 ) return
     do i = 1, n
       c_char_out(i) = f_char_in(i:i)
     end do

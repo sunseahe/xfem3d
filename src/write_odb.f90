@@ -4,7 +4,8 @@ module write_odb
   use types
   use general_routines, only: f2c_char
   use read_input, only: input_file_name, fe_type, nodes, finite_elements
-  use fe_c3d4, only: dom, nnod
+  use point, only: dom
+  use fe_c3d10, only: nelnod
   implicit none
   private
 !*****************************************************************************80
@@ -82,10 +83,10 @@ module write_odb
 !*****************************************************************************80
 ! Write model data
 !*****************************************************************************80
-  subroutine write_model_data(odb_num,istat,emsg)
+  subroutine write_model_data(odb_num,esta,emsg)
     !
     integer(ik), intent(in) :: odb_num
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: n
@@ -99,16 +100,16 @@ module write_odb
     n = len_trim(input_file_name)
     write(odb_file_name,'(a,a,i3.3,a)' ) input_file_name(1:n-4), &
     &'_', odb_num, '.odb'
-    call f2c_char(odb_file_name,c_odb_file_name,istat,emsg)
+    call f2c_char(odb_file_name,c_odb_file_name,esta,emsg)
     ! Fe type
-    call f2c_char(fe_type,c_fe_type,istat,emsg)
+    call f2c_char(fe_type,c_fe_type,esta,emsg)
     ! Node coordinates and connectivity
     nnod = size(nodes)
     nel = size(finite_elements)
-    allocate(coordinates(nnod,dom),stat=istat,errmsg=emsg)
-    if ( istat /= 0 ) return
-    allocate(connectivity(nel,nnod),stat=istat,errmsg=emsg)
-    if ( istat /= 0 ) return
+    allocate(coordinates(nnod,dom),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
+    allocate(connectivity(nel,nelnod),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
     ! Copy
     do n = 1, nnod
       coordinates(n,:) = real(nodes(n)%x,kind=c_float)
@@ -121,22 +122,22 @@ module write_odb
     connectivity_ptr = c_loc(connectivity(1,1))
     ! Write model data
     odb = model_data(c_odb_file_name,c_fe_type,int(dom,kind=c_int), &
-    &int(nnod,kind=c_int),coordinates_ptr,int(nel,kind=c_int), &
-    & int(nnod,kind=c_int),connectivity_ptr)
+    & int(nnod,kind=c_int),coordinates_ptr,int(nel,kind=c_int), &
+    & int(nelnod,kind=c_int),connectivity_ptr)
     !
   end subroutine write_model_data
 !*****************************************************************************80
-  subroutine create_step(step_name,step_desc,istat,emsg)
+  subroutine create_step(step_name,step_desc,esta,emsg)
     character(len=*),intent(in) :: step_name
     character(len=*),intent(in) :: step_desc
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     character(len=1,kind=c_char), allocatable :: c_step_name(:), &
     & c_step_desc(:)
     !
-    call f2c_char(step_name,c_step_name,istat,emsg); if ( istat /= 0 ) return
-    call f2c_char(step_desc,c_step_desc,istat,emsg); if ( istat /= 0 ) return
+    call f2c_char(step_name,c_step_name,esta,emsg); if ( esta /= 0 ) return
+    call f2c_char(step_desc,c_step_desc,esta,emsg); if ( esta /= 0 ) return
     call step(odb,c_step_name,c_step_desc)
     !
   end subroutine create_step
@@ -144,19 +145,19 @@ module write_odb
 ! Create frame
 !*****************************************************************************80
   subroutine create_frame(step_name,frame_desc,frame_num,time,&
-    &istat,emsg)
+    &esta,emsg)
     character(len=*),intent(in) :: step_name
     character(len=*),intent(in) :: frame_desc
     integer, intent(in) :: frame_num
     real(rk), intent(in) :: time
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     character(len=1,kind=c_char), allocatable :: c_step_name(:), &
     & c_frame_desc(:)
     !
-    call f2c_char(step_name,c_step_name,istat,emsg); if ( istat /= 0 ) return
-    call f2c_char(frame_desc,c_frame_desc,istat,emsg); if ( istat /= 0 ) return
+    call f2c_char(step_name,c_step_name,esta,emsg); if ( esta /= 0 ) return
+    call f2c_char(frame_desc,c_frame_desc,esta,emsg); if ( esta /= 0 ) return
     call frame(odb,c_step_name,c_frame_desc,&
     & int(frame_num,kind=c_int),real(time,kind=c_float))
     !
@@ -165,7 +166,7 @@ module write_odb
 ! Write scalar field
 !*****************************************************************************80
   subroutine write_scalar_field(step_name,frame_num,field_name,&
-    & field_description,field_values,field_default,istat,emsg)
+    & field_description,field_values,field_default,esta,emsg)
     !
     character(len=*),intent(in) :: step_name
     integer, intent(in) :: frame_num
@@ -173,7 +174,7 @@ module write_odb
     character(len=*),intent(in) :: field_description
     real(rk), intent(in) :: field_values(:)
     logical, intent(in) :: field_default
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: nnod
@@ -182,16 +183,16 @@ module write_odb
     &c_field_name(:), c_field_description(:)
     type(c_ptr) :: field_values_ptr
     !
-    call f2c_char(step_name,c_step_name,istat,emsg)
-    if ( istat /= 0 ) return
-    call f2c_char(field_name,c_field_name,istat,emsg)
-    if ( istat /= 0 ) return
-    call f2c_char(field_description,c_field_description,istat,emsg)
-    if ( istat /= 0 ) return
+    call f2c_char(step_name,c_step_name,esta,emsg)
+    if ( esta /= 0 ) return
+    call f2c_char(field_name,c_field_name,esta,emsg)
+    if ( esta /= 0 ) return
+    call f2c_char(field_description,c_field_description,esta,emsg)
+    if ( esta /= 0 ) return
     ! Field values
     nnod = size(nodes)
-    allocate(c_field_values(size(field_values)),stat=istat,errmsg=emsg)
-    if ( istat /= 0 ) return
+    allocate(c_field_values(size(field_values)),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
     c_field_values = real(field_values,kind=c_float)
     field_values_ptr = c_loc(c_field_values(1))
     ! Write field
@@ -204,12 +205,12 @@ module write_odb
 !*****************************************************************************80
 ! Write scalar field
 !*****************************************************************************80
-  subroutine close_odb_file(istat,emsg)
-    integer(ik), intent(out) :: istat
+  subroutine close_odb_file(esta,emsg)
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     call close_odb(odb)
     odb = c_null_ptr
-    istat = 0
+    esta = 0
     emsg = ''
   end subroutine close_odb_file
 !*****************************************************************************80

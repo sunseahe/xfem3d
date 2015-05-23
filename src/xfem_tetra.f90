@@ -11,11 +11,11 @@ module xtet
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine set_sub_xtets(lsf,sub_tets,istat,emsg)
+  subroutine set_sub_xtets(lsf,sub_tets,esta,emsg)
     !
     real(rk), intent(in) :: lsf(:)
     type(c3d4_t), allocatable, intent(out) :: sub_tets(:)
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     real(rk) :: volume, strech
@@ -43,8 +43,8 @@ contains
     case( 0 ) ! Prazen element
 !*****************************************************************************80
     case( 1 ) ! Poln le vrh tetraedra
-      allocate(sub_tets(1),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(sub_tets(1),stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       do i = 1, 4
         if (i==nod_in(1)) then
           ! Ohrani vozlisce s pozitivno lsf vrednostjo
@@ -55,16 +55,16 @@ contains
           & xi(nod_in(1),:))/(lsf(i) - lsf(nod_in(1))))*lsf(i)
         endif
       end do
-      call calc_tet_vol(sub_tets(1),volume,istat,emsg)
-      call calc_tet_strech(sub_tets(1),volume,strech,istat,emsg)
+      call calc_tet_vol(sub_tets(1),volume,esta,emsg)
+      call calc_tet_strech(sub_tets(1),volume,strech,esta,emsg)
       if ( (volume.lt.volume_trsh) .or. (strech.lt.strech_trsh) ) then
-        deallocate(sub_tets,stat=istat,errmsg=emsg)
-        if( istat /= 0 ) return
+        deallocate(sub_tets,stat=esta,errmsg=emsg)
+        if( esta /= 0 ) return
       endif
 !*****************************************************************************80
     case( 2 ) != Polna polovica tetraedra
-      allocate(sub_tets(3),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(sub_tets(3),stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       n_dealloc=0
 
       if ((nod_in(1)==1).and.(nod_in(2)==2)) then
@@ -85,7 +85,7 @@ contains
       else if ((nod_in(1)==3).and.(nod_in(2)==4)) then
           nod_tet=[3,4,1,2]
       else
-        istat = -1
+        esta = -1
         emsg = 'Set sub xtets: No variants'
         return
       end if
@@ -98,8 +98,8 @@ contains
       & xi(nod_tet(3),:))/(lsf(nod_tet(1)) - lsf(nod_tet(3))))*lsf(nod_tet(1))
       sub_tets(1)%nodes(4)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) -  &
       & xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
-      call calc_tet_vol(sub_tets(1),volume,istat,emsg)
-      call calc_tet_strech(sub_tets(1),volume,strech,istat,emsg)
+      call calc_tet_vol(sub_tets(1),volume,esta,emsg)
+      call calc_tet_strech(sub_tets(1),volume,strech,esta,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then
         call deallocate_tet(sub_tets, 1)
         n_dealloc=n_dealloc+1
@@ -113,8 +113,8 @@ contains
       & - xi(nod_tet(3),:))/(lsf(nod_tet(2)) - lsf(nod_tet(3))))*lsf(nod_tet(2))
       sub_tets(2-n_dealloc)%nodes(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
-      call calc_tet_vol(sub_tets(2-n_dealloc),volume,istat,emsg)
-      call calc_tet_strech(sub_tets(2-n_dealloc),volume,strech,istat,emsg)
+      call calc_tet_vol(sub_tets(2-n_dealloc),volume,esta,emsg)
+      call calc_tet_strech(sub_tets(2-n_dealloc),volume,strech,esta,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then
         call deallocate_tet(sub_tets, 2-n_dealloc)
         n_dealloc=n_dealloc+1
@@ -128,8 +128,8 @@ contains
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
       sub_tets(3-n_dealloc)%nodes(4)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(2))
-      call calc_tet_vol(sub_tets(3-n_dealloc),volume,istat,emsg)
-      call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,istat,emsg)
+      call calc_tet_vol(sub_tets(3-n_dealloc),volume,esta,emsg)
+      call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,esta,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then
         call deallocate_tet(sub_tets, 3-n_dealloc)
         n_dealloc=n_dealloc+1
@@ -137,8 +137,8 @@ contains
 !*****************************************************************************80
     CASE( 3 ) != Odreze vrh tetraedra
       n_dealloc=0
-      allocate(sub_tets(3),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(sub_tets(3),stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
 
       if ((nod_in(1)==1).and.(nod_in(2)==2).and.(nod_in(3)==3)) then
           nod_tet=[1,2,3,4]
@@ -153,7 +153,7 @@ contains
           nod_tet=[1,3,4,2]
 
       else
-        istat = -1
+        esta = -1
         emsg = 'Set sub xtets: No variants'
         return
       endif
@@ -167,8 +167,8 @@ contains
       &xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
 !*****************************************************************************80
       ! drugi tetraeder
-      call calc_tet_vol(sub_tets(1),volume,istat,emsg)
-      call calc_tet_strech(sub_tets(1),volume,strech,istat,emsg)
+      call calc_tet_vol(sub_tets(1),volume,esta,emsg)
+      call calc_tet_strech(sub_tets(1),volume,strech,esta,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then
         call deallocate_tet(sub_tets, 1-n_dealloc)
         n_dealloc=n_dealloc+1
@@ -179,8 +179,8 @@ contains
       & xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
       sub_tets(2-n_dealloc)%nodes(4)%x = xi(nod_tet(3),:) - ((xi(nod_tet(3),:) -&
       & xi(nod_tet(4),:))/(lsf(nod_tet(3)) - lsf(nod_tet(4))))*lsf(nod_tet(3))
-      call calc_tet_vol(sub_tets(2-n_dealloc),volume,istat,emsg)
-      call calc_tet_strech(sub_tets(2-n_dealloc),volume,strech,istat,emsg)
+      call calc_tet_vol(sub_tets(2-n_dealloc),volume,esta,emsg)
+      call calc_tet_strech(sub_tets(2-n_dealloc),volume,strech,esta,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then
         call deallocate_tet(sub_tets, 2-n_dealloc)
         n_dealloc=n_dealloc+1
@@ -194,22 +194,22 @@ contains
       & xi(nod_tet(4),:))/(lsf(nod_tet(2)) - lsf(nod_tet(4))))*lsf(nod_tet(2))
       sub_tets(3-n_dealloc)%nodes(4)%x = xi(nod_tet(3),:) - ((xi(nod_tet(3),:) -&
       xi(nod_tet(4),:))/(lsf(nod_tet(3)) - lsf(nod_tet(4))))*lsf(nod_tet(3))
-      call calc_tet_vol(sub_tets(3-n_dealloc),volume,istat,emsg)
-      call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,istat,emsg)
+      call calc_tet_vol(sub_tets(3-n_dealloc),volume,esta,emsg)
+      call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,esta,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then
         call deallocate_tet(sub_tets, 3-n_dealloc)
         n_dealloc=n_dealloc+1
       endif
 !*****************************************************************************80
     case( 4 ) != poln tetraeder
-      allocate(sub_tets(1),stat=istat,errmsg=emsg)
-      if( istat /= 0 ) return
+      allocate(sub_tets(1),stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
       do i1=1,4
         sub_tets(1)%nodes(i1)%x = xi(i1,:)
       end do
     end select
 !*****************************************************************************80
-    istat = 0
+    esta = 0
     emsg = ''
   end subroutine
 !*****************************************************************************80

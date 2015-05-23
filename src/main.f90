@@ -5,36 +5,36 @@ program xfem_tetra_test
   use volume_integral
   implicit none
 !*****************************************************************************80
-  integer(ik) :: istat = 0
+  integer(ik) :: esta = 0
   character(len=cl) :: emsg = ''
 !*****************************************************************************80
   logical(lk) :: input_file_given = .false.
 !*****************************************************************************80
   ! Command line arguments
-  call get_command_line_args(istat,emsg)
-  if ( istat /= 0 ) call print_error(istat,emsg)
+  call get_command_line_args(esta,emsg)
+  if ( esta /= 0 ) call print_error(esta,emsg)
   ! Open input file
   inquire(file=input_file_name,exist=input_file_given)
   if ( .not.input_file_given ) then
-    istat = -1
+    esta = -1
     emsg = 'Input file does not exist.'
   end if
-  if ( istat /= 0 ) call print_error(istat,emsg)
-  open(newunit=inp_file,file=input_file_name,iostat=istat,iomsg=emsg,&
+  if ( esta /= 0 ) call print_error(esta,emsg)
+  open(newunit=inp_file,file=input_file_name,iostat=esta,iomsg=emsg,&
   &action='read',status='old')
-  if ( istat /= 0 ) call print_error(istat,emsg)
+  if ( esta /= 0 ) call print_error(esta,emsg)
 !*****************************************************************************80
   ! Read data
 !*****************************************************************************80
-  call read_data(istat,emsg)
-  if ( istat /= 0 ) call print_error(istat,emsg)
+  call read_data(esta,emsg)
+  if ( esta /= 0 ) call print_error(esta,emsg)
   if ( debug ) call read_input_statistics()
   write(stdout,'(a)') 'Read data complete.'
 !*****************************************************************************80
   ! Calculate volume
 !*****************************************************************************80
-  call test_functions(istat,emsg)
-  if ( istat /= 0 ) call print_error(istat,emsg)
+  call test_functions(esta,emsg)
+  if ( esta /= 0 ) call print_error(esta,emsg)
   write(stdout,'(a)') 'Tests complete.'
   stop 0
 !*****************************************************************************80
@@ -42,9 +42,9 @@ contains
 !*****************************************************************************80
 ! Check command line arguments
 !*****************************************************************************80
-  subroutine get_command_line_args(istat,emsg)
+  subroutine get_command_line_args(esta,emsg)
     !
-    integer(ik), intent(out) :: istat
+    integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
     !
     integer(ik) :: i, n
@@ -57,8 +57,8 @@ contains
       write(stderr,'(a)') 'Get command line arguments:&
       & no valid arguments.'
     end if
-    allocate(arg_list(narg),stat=istat,errmsg=emsg)
-    if ( istat /= 0 ) return
+    allocate(arg_list(narg),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
     ! Set args to list and lower
     do i = 1, narg
       call get_command_argument(i,arg_list(i))
