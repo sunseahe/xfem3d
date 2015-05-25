@@ -1,6 +1,7 @@
 module read_input
   use types
   use general_routines
+  use memory_storage
   use tokenize_string, only: tokenize, comma, equal
   use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
   use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll
@@ -19,6 +20,7 @@ module read_input
 !*****************************************************************************80
   public :: inp_file, input_file_name, read_data, read_input_statistics
   public :: fe_type, nodes, finite_elements
+  public :: read_input_finish
 !*****************************************************************************80
   contains
 !*****************************************************************************80
@@ -256,10 +258,31 @@ module read_input
 !*****************************************************************************80
   subroutine read_input_statistics()
     !
+    integer(int64) :: storage
+    !
     write(stdout,'(a,i0)') 'Number of nodes is: ', size(nodes)
     write(stdout,'(a,i0)') 'Number of elements is: ', size(finite_elements)
     write(stdout,'(a)') 'Reading time: '
+    storage = size_in_bits(nodes) + size_in_bits(finite_elements)
+    write(stdout,'(a,a)') 'Data allocated: ', write_size_of_storage(storage)
     !
   end subroutine read_input_statistics
+!*****************************************************************************80
+! Finish
+!*****************************************************************************80
+  subroutine read_input_finish(esta,emsg)
+    !
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    if ( allocated(nodes) ) deallocate(nodes,stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
+    if ( allocated(finite_elements) ) deallocate(finite_elements,&
+    &stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
+    esta = 0
+    emsg = ''
+    !
+  end subroutine read_input_finish
 !*****************************************************************************80
 end module read_input

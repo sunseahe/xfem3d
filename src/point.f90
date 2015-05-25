@@ -1,6 +1,7 @@
 module point
   use types
   use ll
+  use memory_storage
   implicit none
   private
 !*****************************************************************************80

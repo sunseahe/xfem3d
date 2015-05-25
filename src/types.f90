@@ -1,6 +1,7 @@
 module types
   use iso_fortran_env, only: &
   & ik => int32, &
+  & int64, &
 #ifndef DOUBLE
   & rk => real32, &
 #else
@@ -26,7 +27,7 @@ module types
   logical(lk), parameter :: debug = .true.
 #endif
 !*****************************************************************************80
-  public :: ik, rk, cl, lk, es, stdout, stdin, stderr, debug
+  public :: ik, int64, rk, cl, lk, es, stdout, stdin, stderr, debug
 !*****************************************************************************80
 end module types
 
@@ -178,3 +179,52 @@ contains
   end subroutine f2c_char
 !*****************************************************************************80
 end module general_routines
+
+module memory_storage
+  use types
+  implicit none
+  private
+!*****************************************************************************80
+  interface size_in_bits
+    module procedure size_in_bits_scalar
+    module procedure size_in_bits_vector
+    module procedure size_in_bits_matrix
+  end interface size_in_bits
+!*****************************************************************************80
+  public :: size_in_bits, write_size_of_storage
+!*****************************************************************************80
+contains
+!*****************************************************************************80
+  pure integer(int64) function size_in_bits_scalar(scalar)
+    class(*), intent(in) :: scalar
+    size_in_bits_scalar = storage_size(scalar,kind=int64)
+  end function size_in_bits_scalar
+!*****************************************************************************80
+  pure integer(int64) function size_in_bits_vector(vector)
+    class(*), intent(in) :: vector(:)
+    size_in_bits_vector = size(vector) * storage_size(vector,kind=int64)
+  end function size_in_bits_vector
+!*****************************************************************************80
+  pure integer(int64) function size_in_bits_matrix(matrix)
+    class(*), intent(in) :: matrix(:,:)
+    size_in_bits_matrix = size(matrix,dim=1) * &
+    & size(matrix,dim=2) * storage_size(matrix,kind=int64)
+  end function size_in_bits_matrix
+!*****************************************************************************80
+  pure character(len=cl) function write_size_of_storage(x)
+    integer(int64), intent(in) :: x
+    real :: storage
+    storage = 1.25e-7 * x
+    !
+    if ( storage < 1.0e+3 ) then
+      write(write_size_of_storage,'(f4.1,a)') storage, ' MB'
+    else
+      storage = 1.0e-3 * storage
+      write(write_size_of_storage,'(f0.1,a)') storage, ' GB'
+    end if
+    !
+  end function write_size_of_storage
+!*****************************************************************************80
+end module memory_storage
+
+

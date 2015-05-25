@@ -10,7 +10,8 @@ program xfem_tetra_test
 !*****************************************************************************80
   logical(lk) :: input_file_given = .false.
 !*****************************************************************************80
-  ! Command line arguments
+! Command line arguments
+!*****************************************************************************80
   call get_command_line_args(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
   ! Open input file
@@ -24,18 +25,23 @@ program xfem_tetra_test
   &action='read',status='old')
   if ( esta /= 0 ) call print_error(esta,emsg)
 !*****************************************************************************80
-  ! Read data
+! Read data
 !*****************************************************************************80
   call read_data(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
   if ( debug ) call read_input_statistics()
   write(stdout,'(a)') 'Read data complete.'
 !*****************************************************************************80
-  ! Calculate volume
+! Calculate volume
 !*****************************************************************************80
   call test_functions(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
   write(stdout,'(a)') 'Tests complete.'
+!*****************************************************************************80
+! Finish
+!*****************************************************************************80
+  call read_input_finish(esta,emsg)
+  if ( esta /= 0 ) call print_error(esta,emsg)
   stop 0
 !*****************************************************************************80
 contains
@@ -73,11 +79,11 @@ contains
         i = i + 1
         argval = arg_list(i)
         n = 0; n = len_trim(argval)
-        IF( trim(argval(n-3:)) /= '.inp' ) THEN
+        if( trim(argval(n-3:)) /= '.inp' ) then
           input_file_name = trim(argval) // '.inp'
-        ELSE
+        else
           input_file_name = argval
-        END IF
+        end if
         input_file_given = .true.
       ! Help
       case( '-h', '--help' )
@@ -95,6 +101,6 @@ contains
     end if
     !
   end subroutine
-
+!*****************************************************************************80
 end program
 
