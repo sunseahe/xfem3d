@@ -145,9 +145,11 @@ module fe_c3d4
     pnts(1)=1; pnts(2)=2; pnts(3)=3; pnts(4)=4; pnts(5)=1; pnts(6)=2;
     do i = 1, 4
       len_a=0.0_rk; s=0.0_rk; len_max=0.0_rk
-      len_a(1)=tet%nodes(pnts(i)).norm.tet%nodes(pnts(i+1))
-      len_a(2)=tet%nodes(pnts(i+1)).norm.tet%nodes(pnts(i+2))
-      len_a(3)=tet%nodes(pnts(i+2)).norm.tet%nodes(pnts(i))
+      associate(n => tet%nodes(:))
+      len_a(1)=n(pnts(i)).norm.n(pnts(i+1))
+      len_a(2)=n(pnts(i+1)).norm.n(pnts(i+2))
+      len_a(3)=n(pnts(i+2)).norm.n(pnts(i))
+      end associate
       do j=1,3
        if (len_a(j).gt.len_max) len_max=len_a(j)
        s=s+len_a(j)/2.0_rk
@@ -343,11 +345,7 @@ module fe_c3d4
     if( esta /= 0 ) return
     call self%reset()
     do i = 1, self%get_nitem()
-      if(allocated(curr)) then
-        deallocate(curr,stat=esta,errmsg=emsg)
-        if( esta /= 0 ) return
-      end if
-      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      call self%get_current(curr,esta,emsg)
       if( esta /= 0 ) return
       select type(curr)
       type is( c3d4_t )

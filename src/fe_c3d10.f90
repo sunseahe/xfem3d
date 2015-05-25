@@ -81,11 +81,7 @@ contains
     if( esta /= 0 ) return
     call self%reset()
     do i = 1, self%get_nitem()
-      if(allocated(curr)) then
-        deallocate(curr,stat=esta,errmsg=emsg)
-        if( esta /= 0 ) return
-      end if
-      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      call self%get_current(curr,esta,emsg)
       if( esta /= 0 ) return
       select type(curr)
       type is( c3d10_t )

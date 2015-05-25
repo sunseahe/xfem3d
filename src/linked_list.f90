@@ -97,25 +97,37 @@ contains
     if ( associated(self%head) ) is_empty = .false.
   end function is_empty
   !
-  pure function get_first(self)
+  pure subroutine get_first(self,first,esta,emsg)
     class(list), intent(in) :: self
-    class(*), allocatable :: get_first
+    class(*), allocatable, intent(out) :: first
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
     if ( .not. associated(self%head) ) then
-      allocate(get_first,source=0) ! Something for error
+      esta = -1
+      emsg = 'Linked list: no items'
     else
-      allocate(get_first,source=self%head%any_item)
+      allocate(first,source=self%head%any_item,&
+      &stat=esta,errmsg=emsg)
     end if
-  end function get_first
+    !
+  end subroutine get_first
   !
-  pure function get_current(self)
+  pure subroutine get_current(self,current,esta,emsg)
     class(list), intent(in) :: self
-    class(*), allocatable :: get_current
+    class(*), allocatable, intent(out) :: current
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
     if ( .not. associated(self%head) ) then
-      allocate(get_current,source=0) ! Something for error
+      esta = -1
+      emsg = 'Linked list: no items'
     else
-      allocate(get_current,source=self%current%any_item)
+      allocate(current,source=self%current%any_item,&
+      &stat=esta,errmsg=emsg)
     end if
-  end function get_current
+    !
+  end subroutine get_current
   !
   pure subroutine reset(self)
     class(list), intent(inout) :: self
@@ -184,11 +196,7 @@ contains
     if( esta /= 0 ) return
     call self%reset()
     do i = 1, self%get_nitem()
-      if(allocated(curr)) then
-        deallocate(curr,stat=esta,errmsg=emsg)
-        if( esta /= 0 ) return
-      end if
-      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      call self%get_current(curr,esta,emsg)
       if( esta /= 0 ) return
       select type(curr)
       type is( character(*) )
@@ -223,25 +231,21 @@ contains
     !
     if ( self%is_empty() ) then
       esta = -1
-      emsg = 'List is empty'
+      emsg = 'Integer linked list: list is empty'
       return
     end if
     allocate(arr(self%get_nitem()),stat=esta,errmsg=emsg)
     if( esta /= 0 ) return
     call self%reset()
     do i = 1, self%get_nitem()
-      if(allocated(curr)) then
-        deallocate(curr,stat=esta,errmsg=emsg)
-        if( esta /= 0 ) return
-      end if
-      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      call self%get_current(curr,esta,emsg)
       if( esta /= 0 ) return
       select type(curr)
       type is( integer(ik) )
         arr(i) = curr
       class default
         esta = -1
-        emsg = 'Wrong linked list item.'
+        emsg = 'Integer linked list: wrong linked list item.'
         return
       end select
       call self%set_next()
@@ -277,11 +281,7 @@ contains
     !
     call self%reset()
     do i = 1, self%get_nitem()
-      if(allocated(curr)) then
-        deallocate(curr,stat=esta,errmsg=emsg)
-        if( esta /= 0 ) return
-      end if
-      allocate(curr,source=self%get_current(),stat=esta,errmsg=emsg)
+      call self%get_current(curr,esta,emsg)
       if( esta /= 0 ) return
       select type(curr)
       type is( real(rk) )
