@@ -264,7 +264,8 @@ module read_input
     write(stdout,'(a,i0)') 'Number of elements is: ', size(finite_elements)
     write(stdout,'(a)') 'Reading time: '
     storage = size_in_bits(nodes) + size_in_bits(finite_elements)
-    write(stdout,'(a,a)') 'Data allocated: ', write_size_of_storage(storage)
+    write(stdout,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
+    &storage))
     !
   end subroutine read_input_statistics
 !*****************************************************************************80

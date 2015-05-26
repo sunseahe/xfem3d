@@ -1,5 +1,6 @@
 module types
   use iso_fortran_env, only: &
+  & int8, &
   & ik => int32, &
   & int64, &
 #ifndef DOUBLE
@@ -27,7 +28,7 @@ module types
   logical(lk), parameter :: debug = .true.
 #endif
 !*****************************************************************************80
-  public :: ik, int64, rk, cl, lk, es, stdout, stdin, stderr, debug
+  public :: ik, int8, int64, rk, cl, lk, es, stdout, stdin, stderr, debug
 !*****************************************************************************80
 end module types
 
@@ -185,6 +186,8 @@ module memory_storage
   implicit none
   private
 !*****************************************************************************80
+  integer(ik), parameter :: bit = 8
+!*****************************************************************************80
   interface size_in_bits
     module procedure size_in_bits_scalar
     module procedure size_in_bits_vector
@@ -197,18 +200,35 @@ contains
 !*****************************************************************************80
   pure integer(int64) function size_in_bits_scalar(scalar)
     class(*), intent(in) :: scalar
-    size_in_bits_scalar = storage_size(scalar,kind=int64)
+    !
+    integer(int64) :: length
+    integer(int8), allocatable :: enci(:)
+    !
+    length = size(transfer(scalar,enci),kind=int64)
+    size_in_bits_scalar = bit * length
+    !
   end function size_in_bits_scalar
 !*****************************************************************************80
   pure integer(int64) function size_in_bits_vector(vector)
     class(*), intent(in) :: vector(:)
-    size_in_bits_vector = size(vector) * storage_size(vector,kind=int64)
+    !
+    integer(int64) :: length
+    integer(int8), allocatable :: enci(:)
+    !
+    length = size(transfer(vector,enci),kind=int64)
+    size_in_bits_vector = bit * length
+    !
   end function size_in_bits_vector
 !*****************************************************************************80
   pure integer(int64) function size_in_bits_matrix(matrix)
     class(*), intent(in) :: matrix(:,:)
-    size_in_bits_matrix = size(matrix,dim=1) * &
-    & size(matrix,dim=2) * storage_size(matrix,kind=int64)
+    !
+    integer(int64) :: length
+    integer(int8), allocatable :: enci(:)
+    !
+    length = size(transfer(matrix,enci),kind=int64)
+    size_in_bits_matrix = bit * length
+    !
   end function size_in_bits_matrix
 !*****************************************************************************80
   pure character(len=cl) function write_size_of_storage(x)
