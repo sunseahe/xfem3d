@@ -186,60 +186,63 @@ module memory_storage
   implicit none
   private
 !*****************************************************************************80
-  integer(ik), parameter :: bit = 8
+  interface size_in_bytes
+    module procedure size_in_bytes_scalar
+    module procedure size_in_bytes_vector
+    module procedure size_in_bytes_matrix
+  end interface size_in_bytes
 !*****************************************************************************80
-  interface size_in_bits
-    module procedure size_in_bits_scalar
-    module procedure size_in_bits_vector
-    module procedure size_in_bits_matrix
-  end interface size_in_bits
-!*****************************************************************************80
-  public :: size_in_bits, write_size_of_storage
+  public :: size_in_bytes, write_size_of_storage
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  pure integer(int64) function size_in_bits_scalar(scalar)
+  pure integer(int64) function size_in_bytes_scalar(scalar)
     class(*), intent(in) :: scalar
     !
     integer(int64) :: length
     integer(int8), allocatable :: enci(:)
     !
     length = size(transfer(scalar,enci),kind=int64)
-    size_in_bits_scalar = bit * length
+    size_in_bytes_scalar = length
     !
-  end function size_in_bits_scalar
+  end function size_in_bytes_scalar
 !*****************************************************************************80
-  pure integer(int64) function size_in_bits_vector(vector)
+  pure integer(int64) function size_in_bytes_vector(vector)
     class(*), intent(in) :: vector(:)
     !
+    integer(ik) :: l
     integer(int64) :: length
     integer(int8), allocatable :: enci(:)
     !
-    length = size(transfer(vector,enci),kind=int64)
-    size_in_bits_vector = bit * length
+    l = lbound(vector,dim=1)
+    length = size(transfer(vector(l),enci),kind=int64)
+    size_in_bytes_vector = size(vector) * length
     !
-  end function size_in_bits_vector
+  end function size_in_bytes_vector
 !*****************************************************************************80
-  pure integer(int64) function size_in_bits_matrix(matrix)
+  pure integer(int64) function size_in_bytes_matrix(matrix)
     class(*), intent(in) :: matrix(:,:)
     !
+    integer(ik) :: l1, l2
     integer(int64) :: length
     integer(int8), allocatable :: enci(:)
     !
-    length = size(transfer(matrix,enci),kind=int64)
-    size_in_bits_matrix = bit * length
+    l1 = lbound(matrix,dim=1); l2 = lbound(matrix,dim=2)
+    length = size(transfer(matrix(l1,l2),enci),kind=int64)
+    size_in_bytes_matrix = size(matrix,dim=1) * size(matrix,dim=2) &
+    & * length
     !
-  end function size_in_bits_matrix
+  end function size_in_bytes_matrix
 !*****************************************************************************80
-  pure character(len=cl) function write_size_of_storage(x)
+   character(len=cl) function write_size_of_storage(x)
     integer(int64), intent(in) :: x
-    real :: storage
-    storage = 1.25e-7 * x
+    real(rk) :: storage
+    storage = 1.0e-6_rk * real(x,kind=rk)
     !
-    if ( storage < 1.0e+3 ) then
+    if ( storage < 1.0e+3_rk ) then
       write(write_size_of_storage,'(f4.1,a)') storage, ' MB'
     else
-      storage = 1.0e-3 * storage
+      storage = 1.0e-3_rk * storage
       write(write_size_of_storage,'(f0.1,a)') storage, ' GB'
     end if
     !
