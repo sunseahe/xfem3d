@@ -3,7 +3,7 @@ module xtet
   use tet_volume
   use determinant
   implicit none
-  private
+  private   
 !*****************************************************************************80
   real(rk), parameter :: volume_trsh = 0.0_rk, strech_trsh=0.0_rk
 !*****************************************************************************80
@@ -77,10 +77,10 @@ contains
           nod_tet=[1,4,2,3]
 
       else if ((nod_in(1)==2).and.(nod_in(2)==3)) then
-          nod_tet=[2,3,4,1]
+          nod_tet=[3,2,4,1]
 
       else if ((nod_in(1)==2).and.(nod_in(2)==4)) then
-          nod_tet=[2,4,1,3]
+          nod_tet=[4,2,1,3]
 
       else if ((nod_in(1)==3).and.(nod_in(2)==4)) then
           nod_tet=[3,4,1,2]
@@ -127,7 +127,7 @@ contains
       sub_tets(3-n_dealloc)%vert(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
       sub_tets(3-n_dealloc)%vert(4)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
-      & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
+      & - xi(nod_tet(4),:))/(lsf(nod_tet(2)) - lsf(nod_tet(4))))*lsf(nod_tet(2))
       call calc_tet_vol(sub_tets(3-n_dealloc),volume,istat,emsg)
       call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,istat,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then
@@ -144,10 +144,10 @@ contains
           nod_tet=[1,2,3,4]
 
       else if ((nod_in(1)==2).and.(nod_in(2)==3).and.(nod_in(3)==4)) then
-          nod_tet=[2,3,4,1]
+          nod_tet=[2,4,3,1]
 
       else if ((nod_in(1)==1).and.(nod_in(2)==2).and.(nod_in(3)==4)) then
-          nod_tet=[1,2,4,3]
+          nod_tet=[1,4,2,3]
 
       else if ((nod_in(1)==1).and.(nod_in(2)==3).and.(nod_in(3)==4)) then
           nod_tet=[1,3,4,2]
