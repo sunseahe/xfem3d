@@ -1,8 +1,8 @@
-#FC = ifort
-FC = gfortran
+FC = ifort
+#FC = gfortran
 
-#CC = icpc
-CC = g++
+CC = icpc
+#CC = g++
 
 #Folders
 src_path = ./src

@@ -209,6 +209,8 @@ module write_odb
     character(len=*), intent(out) :: emsg
     call close_odb(odb)
     odb = c_null_ptr
+    istat = 0
+    emsg = ' '
   end subroutine close_odb_file
 !*****************************************************************************80
 end module write_odb
