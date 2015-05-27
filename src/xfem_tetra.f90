@@ -127,7 +127,7 @@ contains
       sub_tets(3-n_dealloc)%vert(3)%x = xi(nod_tet(1),:) - ((xi(nod_tet(1),:) &
       & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
       sub_tets(3-n_dealloc)%vert(4)%x = xi(nod_tet(2),:) - ((xi(nod_tet(2),:) &
-      & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(2))
+      & - xi(nod_tet(4),:))/(lsf(nod_tet(1)) - lsf(nod_tet(4))))*lsf(nod_tet(1))
       call calc_tet_vol(sub_tets(3-n_dealloc),volume,istat,emsg)
       call calc_tet_strech(sub_tets(3-n_dealloc),volume,strech,istat,emsg)
       if ((volume.lt.volume_trsh).or.(strech.lt.strech_trsh)) then

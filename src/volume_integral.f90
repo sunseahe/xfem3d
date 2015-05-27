@@ -148,11 +148,11 @@ contains
           call finite_elements(e)%g_coo(xi_coo_pnt=sub_tets(t)%vert(i),&
           &g_coo_pnt=sub_tets_g_coo_pnts(i),istat=istat,emsg=emsg)
           if ( istat /= 0 ) then
-            write(stdout,'(a,i0)') 'Element number: ', e
-            write(stdout,'(a,4('//es//',:,","))') 'Lsf values: ', lsf
-            write(stdout,'(a,i0)') 'Nuber of subtets: ', size(sub_tets)
-            write(stdout,'(a,i0,a)') 'Sub tet ', t, ' local coordinates'
-            call sub_tets(t)%write()
+!            write(stdout,'(a,i0)') 'Element number: ', e
+!            write(stdout,'(a,4('//es//',:,","))') 'Lsf values: ', lsf
+!            write(stdout,'(a,i0)') 'Nuber of subtets: ', size(sub_tets)
+!            write(stdout,'(a,i0,a)') 'Sub tet ', t, ' local coordinates'
+!            call sub_tets(t)%write()
             return
           end if
         end do
