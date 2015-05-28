@@ -240,6 +240,7 @@ contains
     write(stdout,'(a,'//es//')') 'Calculated volume is: ', volume
     write(stdout,'(a,'//es//')') 'Relative error is: ', abs(volume - &
     & s_1_vol) /  s_1_vol
+
     !
 !    write(stdout,'(a)') 'Calculating volume for torus ...'
 !    call calc_vol(s_2,volume,istat,emsg)
