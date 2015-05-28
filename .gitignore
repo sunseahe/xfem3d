@@ -7,5 +7,6 @@
 *.rpy.*
 *.odb
 *.inp
+*.log
 # Program
 xfem

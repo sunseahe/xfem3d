@@ -234,13 +234,13 @@ contains
     !
   end function size_in_bytes_matrix
 !*****************************************************************************80
-   character(len=cl) function write_size_of_storage(x)
+  pure character(len=cl) function write_size_of_storage(x)
     integer(int64), intent(in) :: x
     real(rk) :: storage
     storage = 1.0e-6_rk * real(x,kind=rk)
     !
     if ( storage < 1.0e+3_rk ) then
-      write(write_size_of_storage,'(f4.1,a)') storage, ' MB'
+      write(write_size_of_storage,'(f5.1,a)') storage, ' MB'
     else
       storage = 1.0e-3_rk * storage
       write(write_size_of_storage,'(f0.1,a)') storage, ' GB'

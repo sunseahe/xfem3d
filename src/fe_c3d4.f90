@@ -221,7 +221,7 @@ module fe_c3d4
     ! Set xi value
     if( gp_num_p ) then
       if ( debug ) then
-        if( gp_num > 1 ) then
+        if( gp_num > ngp ) then
           esta = -1
           emsg ='N matrix scalar tet: only one Gauss point'
           return
