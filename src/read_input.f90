@@ -61,6 +61,7 @@ module read_input
       case( 'node' )
         call read_nodes(esta,emsg); if ( esta /= 0 ) return
 !*****************************************************************************80
+! Move this to a subroutine
       case( 'element')
         do i = 2, size(keyword_arg)
           sub_keyword = keyword_arg(i)
