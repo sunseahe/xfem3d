@@ -46,7 +46,8 @@ module general_routines
   & f2c_char, &
   & size_mtx, &
   & exclude, &
-  & real_interval
+  & real_interval, &
+  & outer
 contains
 !*****************************************************************************80
 ! Print error
@@ -187,6 +188,16 @@ contains
     c_char_out(n+1) = c_null_char
     !
   end subroutine f2c_char
+!*****************************************************************************80
+  pure subroutine outer(x,y,res)
+    real(rk), intent(in)  :: x(:), y(:)
+    real(rk), intent(out) :: res(:,:)
+    integer :: m,n
+    m = size(x)
+    n = size(y)
+    res = 0.0_rk
+    res = spread(x,dim=2,ncopies=n) * spread(y,dim=1,ncopies=m)
+  end subroutine outer
 !*****************************************************************************80
 end module general_routines
 

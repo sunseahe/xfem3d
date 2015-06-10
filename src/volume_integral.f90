@@ -2,7 +2,7 @@ module volume_integral
   use types
   use point, only: dom, point_3d_t
   use fe_c3d10, only:  nelnod, c3d10_t, c3d10_t_ll
-  use read_input, only: nodes, finite_elements
+  use read_input, only: nodes, nfe, finite_elements
   use xtet, only: set_sub_xtets
   use lsf_test_functions
   use write_odb, only: start_odb_api, finish_odb_api, write_model_data,  &
@@ -78,7 +78,7 @@ contains
       lsf_field = 0.0_rk
       lsf_field_val_cal = .false.
       !
-      elements: do e = 1, size(finite_elements)
+      elements: do e = 1, nfe
         element_nodes: do i = 1, nelnod
           x = finite_elements(e)%get_node_coo(i)
           active_node = finite_elements(e)%connectivity(i)
@@ -87,7 +87,9 @@ contains
           lsf_field(active_node) = test_fun(x)
         end do element_nodes
       end do elements
-      !
+      ! Reinitalize function
+
+      ! Write field
       call write_scalar_field(step,frame_num,field_name,&
       & field_description,lsf_field,.true.,esta,emsg)
       if ( esta /= 0 ) return

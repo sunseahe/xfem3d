@@ -2,7 +2,7 @@ module reinitalzation
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
   use types
-  use general_routines, only: size_mtx
+  use general_routines, only: size_mtx, outer
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
 !*****************************************************************************80
@@ -89,12 +89,9 @@ contains
       call c3d10%n_mtx(gp_num=p,n_mtx=n,esta=esta,emsg=emsg)
       call c3d10%gradient(gp_num=p,b_mtx=b,det_jac=det_jac,&
       &esta=esta,emsg=emsg)
-      !call domain_fe%b_mtx_sca(el_coo=el_coo,gp_num=p,b_mtx_sca=b)
-      !w = domain_fe%get_w(gp_num=p)
-      !det_j = domain_fe%det_j(el_coo=el_coo,gp_num=p)
       !
-      !call outer(n,n,rtmp1)
-      !call gemm(transpose(b),b,rtmp2)
+      call outer(n,n,rtmp1)
+      call gemm(transpose(b),b,rtmp2)
       ! integrate
       el_cmtx = el_cmtx + ( rtmp1 + d_t * er * rtmp2 +  &
       & rho * g_mtx )* w(p) * det_jac
@@ -104,5 +101,62 @@ contains
     emsg = ''
     !
   end subroutine cal_el_cmtx
+!*****************************************************************************80
+!  subroutine cmtx_setup(self)
+!    class(reinit_t), intent(inout) :: self
+!    !
+!    integer(ik) :: e, i, j, k, indx
+!    integer(ik) :: num_int
+!    integer(ik) :: el_conn(nnel)
+!    real(rk) :: el_coo(nnel,dom)
+!    real(rk) :: g_mtx(nnel,nnel)
+!    real(rk) :: el_cmtx(nnel,nnel)
+!    real(rk) :: xi_coo(dom), n(nnel)
+!    real(rk), allocatable :: gi_mtx(:,:)
+!    ! allocate a mtx
+!    k = nnel * ( nnel + 1 ) / 2 * nel
+!    call self%c_mtx%alloc('coo',nnod,nnod,k)
+!    ! calculate
+!    indx = 1
+!    do e = 1, nel
+!      el_coo = md%get_elcoo(e)
+!      el_conn = md%get_elconn(e)
+!      ! calculate g mtx
+!      if ( xi_inter(e)%is_intersected ) then
+!        if (allocated(gi_mtx)) deallocate(gi_mtx,stat=istat,errmsg=emsg)
+!        alloc_err(istat,emsg)
+!        num_int = size(xi_inter(e)%xi,dim=1)
+!        allocate(gi_mtx(num_int,nnel),stat=istat,errmsg=emsg)
+!        alloc_err(istat,emsg)
+!        do i = 1, num_int
+!          xi_coo = xi_inter(e)%xi(i,1:dom)
+!          call domain_fe%n_mtx_sca(xi_coo=xi_coo,n_mtx_sca=n)
+!          gi_mtx(i,1:nnel) = n
+!        end do
+!        call gemm(transpose(gi_mtx),gi_mtx,g_mtx)
+!      else
+!        g_mtx = 0.0e0_rk
+!      end if
+!      ! calculate regul mtx fe
+!      call cal_el_cmtx(el_coo,g_mtx,el_cmtx)
+!      ! add to sparse matrix
+!      do i = 1, nnel
+!        do j = 1, nnel
+!          ! symmetric matrix only upper part
+!          if ( el_conn(i) <= el_conn(j) ) then
+!            call self%c_mtx%set_val_coo(indx,el_conn(i), &
+!            &el_conn(j),el_cmtx(i,j))
+!            indx = indx + 1
+!          end if
+!        end do
+!      end do
+!    end do
+!    ! convert to csr format
+!    call self%c_mtx%csrcoo_conv(2)
+!    ! factorize
+!    call self%lss%alloc(self%c_mtx)
+!    call self%lss%solve(1)
+!    !
+!  end subroutine cmtx_setup
 !*****************************************************************************80
 end module reinitalzation

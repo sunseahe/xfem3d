@@ -1,26 +1,19 @@
 module read_input
-  use types
-  use general_routines
-  use memory_storage
+  use types, only: ik, rk, lk, cl, stdout
+  use general_routines, only: str2i
   use tokenize_string, only: tokenize, comma, equal
   use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
   use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll
+  use mesh_data, only: fe_type, set_nodes, set_finite_elements
   implicit none
   private
 !*****************************************************************************80
   integer(ik) :: inp_file = 0
   character(len=cl) :: input_file_name = ''
   !
-  character(len=*), parameter :: fe_type = 'c3d10'
-  !
   logical(lk) :: end_of_file = .false.
-  !
-  type(point_3d_t), allocatable, protected :: nodes(:)
-  type(c3d10_t), allocatable, protected :: finite_elements(:)
 !*****************************************************************************80
-  public :: inp_file, input_file_name, read_data, read_input_statistics
-  public :: fe_type, nodes, finite_elements
-  public :: read_input_finish
+  public :: inp_file, input_file_name, read_data
 !*****************************************************************************80
   contains
 !*****************************************************************************80
@@ -147,7 +140,7 @@ module read_input
       call nodes_ll%add(node,esta,emsg); if ( esta /= 0 ) return
     end do ra
     ! Add nodes
-    call nodes_ll%fill_array(nodes,esta,emsg); if ( esta /= 0 ) return
+    call set_nodes(nodes_ll,esta,emsg);  if ( esta /= 0 ) return
     call nodes_ll%clean(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
@@ -162,13 +155,13 @@ module read_input
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: i, j
+    integer(ik) :: i
     integer(ik) :: rstat
     integer(ik) :: el_conn(nelnod)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
-    type(c3d10_t) :: fe_element
-    type(c3d10_t_ll) :: fe_elements_ll
+    type(c3d10_t) :: fe
+    type(c3d10_t_ll) :: fe_ll
     !
     write(stdout,'(a)') 'Reading connectivity ...'
     !
@@ -195,22 +188,14 @@ module read_input
         call str2i(read_arg(i),el_conn(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      fe_element = c3d10_t(nodes=zero_pnt,connectivity=el_conn)
-      call fe_elements_ll%add(fe_element,esta,emsg)
+      fe = c3d10_t(nodes=zero_pnt,connectivity=el_conn)
+      call fe_ll%add(fe,esta,emsg)
       if ( esta /= 0 ) return
       !
     end do ra
     ! Create element array
-    call fe_elements_ll%fill_array(finite_elements,esta,emsg)
-    if ( esta /= 0 ) return
-    call fe_elements_ll%clean(esta,emsg); if ( esta /= 0 ) return
-    ! Copy nodes to finite elements
-    do i = 1, size(finite_elements)
-      el_conn = finite_elements(i)%connectivity
-      do j = 1, nelnod
-        finite_elements(i)%nodes(j) = nodes(el_conn(j))
-      end do
-    end do
+    call set_finite_elements(fe_ll,esta,emsg); if ( esta /= 0 ) return
+    call fe_ll%clean(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
@@ -254,38 +239,5 @@ module read_input
     end if
     !
   end subroutine read_input_string
-!*****************************************************************************80
-! Read input statistics
-!*****************************************************************************80
-  subroutine read_input_statistics()
-    !
-    integer(int64) :: storage
-    !
-    write(stdout,'(a)') '*** Read input statistics ***'
-    write(stdout,'(a,i0)') 'Number of nodes is: ', size(nodes)
-    write(stdout,'(a,i0)') 'Number of elements is: ', size(finite_elements)
-    write(stdout,'(a)') 'Reading time: '
-    storage = size_in_bytes(nodes) + size_in_bytes(finite_elements)
-    write(stdout,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
-    &storage))
-    !
-  end subroutine read_input_statistics
-!*****************************************************************************80
-! Finish
-!*****************************************************************************80
-  subroutine read_input_finish(esta,emsg)
-    !
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
-    !
-    if ( allocated(nodes) ) deallocate(nodes,stat=esta,errmsg=emsg)
-    if ( esta /= 0 ) return
-    if ( allocated(finite_elements) ) deallocate(finite_elements,&
-    &stat=esta,errmsg=emsg)
-    if ( esta /= 0 ) return
-    esta = 0
-    emsg = ''
-    !
-  end subroutine read_input_finish
 !*****************************************************************************80
 end module read_input
