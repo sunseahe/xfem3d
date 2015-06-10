@@ -44,6 +44,7 @@ module general_routines
   & write_dense_mtx_real, &
   & print_error, &
   & f2c_char, &
+  & size_mtx, &
   & exclude, &
   & real_interval
 contains
@@ -142,6 +143,14 @@ contains
     end do
     !
   end subroutine write_dense_mtx_real
+!*****************************************************************************80
+! Exclude
+!*****************************************************************************80
+  pure logical(lk) function size_mtx(mtx,a,b)
+    class(*), intent(in) :: mtx(:,:)
+    integer(ik), intent(in) :: a, b
+    size_mtx = (size(mtx,dim=1)==a) .or. (size(mtx,dim=2)==b)
+  end function size_mtx
 !*****************************************************************************80
 ! Exclude
 !*****************************************************************************80

@@ -210,6 +210,7 @@ module write_odb
     character(len=*), intent(out) :: emsg
     call close_odb(odb)
     odb = c_null_ptr
+    ! Sucess
     esta = 0
     emsg = ''
   end subroutine close_odb_file

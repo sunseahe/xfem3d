@@ -15,8 +15,8 @@ module read_input
   !
   logical(lk) :: end_of_file = .false.
   !
-  type(point_3d_t), allocatable :: nodes(:)
-  type(c3d10_t), allocatable :: finite_elements(:)
+  type(point_3d_t), allocatable, protected :: nodes(:)
+  type(c3d10_t), allocatable, protected :: finite_elements(:)
 !*****************************************************************************80
   public :: inp_file, input_file_name, read_data, read_input_statistics
   public :: fe_type, nodes, finite_elements

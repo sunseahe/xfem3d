@@ -218,10 +218,10 @@ contains
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: n
+    !integer(ik) :: n
     real(rk), parameter :: s_1_vol = 0.0334707_rk, s_2_vol = 0.0591926_rk
-    real(rk) :: volume
-    character(len=cl) :: gst_inp_file_name
+    !real(rk) :: volume
+    !character(len=cl) :: gst_inp_file_name
     !
     write(stdout,'(a)') 'Writing test functions to odb ...'
     call write_test_functions(esta,emsg)
