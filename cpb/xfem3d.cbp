@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="xfem3d" />
+		<Option pch_mode="2" />
+		<Option compiler="ifcwin" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/xfem3d" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="ifcwin" />
+				<Compiler>
+					<Add option="/debug:full" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/xfem3d" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="ifcwin" />
+				<Compiler>
+					<Add option="/O2" />
+				</Compiler>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="/warn:all" />
+		</Compiler>
+		<Unit filename="../src/determinant.f90" />
+		<Unit filename="../src/fe_c3d10.f90" />
+		<Unit filename="../src/fe_c3d4.f90" />
+		<Unit filename="../src/linked_list.f90" />
+		<Unit filename="../src/lsf_test_functions.f90" />
+		<Unit filename="../src/main.f90" />
+		<Unit filename="../src/mesh_data.f90" />
+		<Unit filename="../src/odb_routines.cpp" />
+		<Unit filename="../src/point.f90" />
+		<Unit filename="../src/read_input.f90" />
+		<Unit filename="../src/reinitalization.f90" />
+		<Unit filename="../src/tokenize_string.f90" />
+		<Unit filename="../src/types.f90" />
+		<Unit filename="../src/volume_integral.f90" />
+		<Unit filename="../src/write_odb.f90" />
+		<Unit filename="../src/xfem_tetra.f90" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

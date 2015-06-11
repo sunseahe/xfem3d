@@ -1,11 +1,14 @@
 module write_odb
+!*****************************************************************************80
   use iso_c_binding, only: c_int, c_float, c_char, &
   & c_null_char, c_ptr, c_loc, c_bool, c_null_ptr
-  use types
+  use types, only: ik, rk, cl
   use general_routines, only: f2c_char
-  use read_input, only: input_file_name, fe_type, nodes, finite_elements
   use point, only: dom
   use fe_c3d10, only: nelnod
+  use mesh_data, only: fe_type, fe_type, nodes, finite_elements
+  use read_input, only: input_file_name
+!*****************************************************************************80
   implicit none
   private
 !*****************************************************************************80

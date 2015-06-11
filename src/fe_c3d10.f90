@@ -1,8 +1,8 @@
 module fe_c3d10
 !*****************************************************************************80
   use blas95, only: gemm
-  use types
-  use ll
+  use types, only: ik, rk, cl, lk, stdout, debug
+  use ll, only: list
   use point, only: dom, point_3d_t
   use general_routines, only:  size_mtx, exclude, real_interval, i2str, r2str
 !*****************************************************************************80

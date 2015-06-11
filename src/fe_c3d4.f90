@@ -1,8 +1,8 @@
 module fe_c3d4
 !*****************************************************************************80
-  use types
-  use determinant
-  use ll
+  use types,  only: ik, rk, cl, lk, stdout, debug
+  use determinant, only: det_sqr_mtx
+  use ll, only: list
   use general_routines, only: exclude, real_interval, i2str, r2str
   use point, only: dom, point_3d_t, zero_pnt
 !*****************************************************************************80

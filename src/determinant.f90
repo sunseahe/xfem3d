@@ -1,5 +1,5 @@
 module determinant
-  use types
+  use types, only: ik, rk
   implicit none
   private
 !*****************************************************************************80

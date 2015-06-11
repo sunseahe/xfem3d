@@ -1,8 +1,9 @@
 program xfem_tetra_test
-  use types
-  use general_routines
-  use read_input
-  use volume_integral
+  use types, only: ik, lk, cl, stdout, stderr
+  use general_routines, only: print_error, to_lower
+  use read_input, only: read_data, input_file_name, inp_file
+  use mesh_data, only: mesh_data_finish
+  use volume_integral, only: test_functions
   implicit none
 !*****************************************************************************80
   integer(ik) :: esta = 0
@@ -28,8 +29,6 @@ program xfem_tetra_test
 ! Read data
 !*****************************************************************************80
   call read_data(esta,emsg)
-  if ( esta /= 0 ) call print_error(esta,emsg)
-  if ( debug ) call read_input_statistics()
   write(stdout,'(a)') 'Read data complete.'
 !*****************************************************************************80
 ! Calculate volume
@@ -40,8 +39,9 @@ program xfem_tetra_test
 !*****************************************************************************80
 ! Finish
 !*****************************************************************************80
-  call read_input_finish(esta,emsg)
+  call mesh_data_finish(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
+!*****************************************************************************80
   stop 0
 !*****************************************************************************80
 contains

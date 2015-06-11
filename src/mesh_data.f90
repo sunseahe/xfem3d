@@ -1,6 +1,6 @@
 module mesh_data
 !*****************************************************************************80
-  use types, only: ik, stdout, int64
+  use types, only: ik, rk, stdout, int64
   use memory_storage, only: size_in_bytes, write_size_of_storage
   use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
   use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll
@@ -15,7 +15,7 @@ module mesh_data
   type(c3d10_t), allocatable, protected :: finite_elements(:)
 !*****************************************************************************80
   public :: fe_type, nnod, nfe, nodes, set_nodes, finite_elements, &
-  & set_finite_elements
+  & set_finite_elements, mesh_data_finish, mesh_data_statistics
 !*****************************************************************************80
   contains
 !*****************************************************************************80
@@ -69,7 +69,6 @@ module mesh_data
     write(stdout,'(a)') '*** Mesh data statistics ***'
     write(stdout,'(a,i0)') 'Number of nodes is: ', nnod
     write(stdout,'(a,i0)') 'Number of elements is: ', nfe
-    write(stdout,'(a)') 'Reading time: '
     storage = size_in_bytes(nodes) + size_in_bytes(finite_elements)
     write(stdout,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
     &storage))

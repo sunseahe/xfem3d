@@ -1,8 +1,8 @@
 module volume_integral
-  use types
+  use types, only: ik, rk, lk, cl, stdout
   use point, only: dom, point_3d_t
   use fe_c3d10, only:  nelnod, c3d10_t, c3d10_t_ll
-  use read_input, only: nodes, nfe, finite_elements
+  use mesh_data, only: nodes, nfe, finite_elements
   use xtet, only: set_sub_xtets
   use lsf_test_functions
   use write_odb, only: start_odb_api, finish_odb_api, write_model_data,  &

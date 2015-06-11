@@ -1,6 +1,6 @@
 module read_input
   use types, only: ik, rk, lk, cl, stdout
-  use general_routines, only: str2i
+  use general_routines, only: str2i, str2r, to_lower
   use tokenize_string, only: tokenize, comma, equal
   use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
   use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll
