@@ -1,7 +1,7 @@
 module reinitalzation
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
-  use types
+  use types, only: ik, rk, lk, debug
   use general_routines, only: size_mtx, outer
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w

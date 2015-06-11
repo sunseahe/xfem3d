@@ -1,5 +1,5 @@
 module ll
-  use types
+  use types, only: ik, rk, lk, cl
   implicit none
   private
 !*****************************************************************************80
@@ -51,9 +51,6 @@ module ll
     procedure :: add => add_real_ll
     procedure :: fill_array => fill_array_real_ll
   end type real_ll
-  type :: real_arr_t
-    real(rk), allocatable :: dat(:)
-  end type real_arr_t
 !*****************************************************************************80
   public :: link, list, char_ll, integer_ll, real_ll
 !*****************************************************************************80

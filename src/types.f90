@@ -33,7 +33,7 @@ module types
 end module types
 
 module general_routines
-  use types
+  use types, only: ik, rk, cl, lk, es, stderr
   implicit none
   private
   public :: to_lower, &

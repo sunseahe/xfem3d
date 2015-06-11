@@ -1,5 +1,5 @@
 module tokenize_string
-  use types
+  use types, only: ik, cl
   use ll, only: char_ll
   implicit none
   private

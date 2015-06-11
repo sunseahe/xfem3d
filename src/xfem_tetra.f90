@@ -1,5 +1,5 @@
 module xtet
-  use types
+  use types, only: ik, rk
   use fe_c3d4
   use determinant
   implicit none
