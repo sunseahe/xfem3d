@@ -1,3 +1,5 @@
+# Code block
+*.layout
 # Objects
 *.mod
 *.o
