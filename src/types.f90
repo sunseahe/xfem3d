@@ -202,7 +202,7 @@ contains
 end module general_routines
 
 module memory_storage
-  use types
+  use types, only: ik, rk, cl, int8, int64
   implicit none
   private
 !*****************************************************************************80
@@ -220,9 +220,9 @@ contains
     class(*), intent(in) :: scalar
     !
     integer(int64) :: length
-    integer(int8), allocatable :: enci(:)
+    integer(int8) :: byte
     !
-    length = size(transfer(scalar,enci),kind=int64)
+    length = size(transfer(scalar,[byte]),kind=int64)
     size_in_bytes_scalar = length
     !
   end function size_in_bytes_scalar
@@ -232,10 +232,10 @@ contains
     !
     integer(ik) :: l
     integer(int64) :: length
-    integer(int8), allocatable :: enci(:)
+    integer(int8) :: byte
     !
     l = lbound(vector,dim=1)
-    length = size(transfer(vector(l),enci),kind=int64)
+    length = size(transfer(vector(l),[byte]),kind=int64)
     size_in_bytes_vector = size(vector) * length
     !
   end function size_in_bytes_vector
@@ -245,10 +245,10 @@ contains
     !
     integer(ik) :: l1, l2
     integer(int64) :: length
-    integer(int8), allocatable :: enci(:)
+    integer(int8) :: byte
     !
     l1 = lbound(matrix,dim=1); l2 = lbound(matrix,dim=2)
-    length = size(transfer(matrix(l1,l2),enci),kind=int64)
+    length = size(transfer(matrix(l1,l2),[byte]),kind=int64)
     size_in_bytes_matrix = size(matrix,dim=1) * size(matrix,dim=2) &
     & * length
     !
