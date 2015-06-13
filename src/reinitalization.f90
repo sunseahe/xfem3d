@@ -5,39 +5,27 @@ module reinitalzation
   use general_routines, only: size_mtx, outer
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
+  use mesh_data, only: nfe
 !*****************************************************************************80
   implicit none
   private
 !*****************************************************************************80
-  type :: reinit_t
-    private
-    logical(lk) :: configured = .false.
-    !type(spar_mtx) :: c_mtx
-    !type(spar_lin_sys) :: lss
-  contains
-    procedure :: set
-    procedure :: is_configured
-    !procedure, private :: cmtx_setup
-    !procedure :: calculate
-  end type reinit_t
-  type(reinit_t), save :: reinit
-!*****************************************************************************80
-  integer(ik) :: num_reinit = 200 ! Number of reinitalization equations
+  logical(lk), protected :: configured = .false.
   logical(lk) :: par_status = .false. ! Parameters set
+  integer(ik) :: num_reinit = 200 ! Number of reinitalization equations
   real(rk) :: alpha = 0.5e0_rk ! Correction to time step
   real(rk) :: d_t = 0.0e0_rk ! Time step
   real(rk) :: er = 0.0e0_rk
   real(rk) :: c = 1.0e-1_rk ! Diffusion coeficient
-  real(rk) :: rho = 1.0e4_rk ! Enforce Dirichlet boundary
+  real(rk) :: rho = 1.0e1_rk ! Enforce Dirichlet boundary
   real(rk) :: sign_dist_tol = 1.0e-3_rk ! Tolerance for convergence
   logical(lk) :: write_par = .false. ! Write parameters to log file
 !*****************************************************************************80
-  public :: reinit
+  public :: set, configured
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine set(self,alpha_in,c_in,rho_in,num_reinit_in,sign_dist_tol_in)
-    class(reinit_t), intent(out) :: self
+  subroutine set(alpha_in,c_in,rho_in,num_reinit_in,sign_dist_tol_in)
     integer(ik), optional, intent(in) :: num_reinit_in
     real(rk), optional, intent(in) :: alpha_in
     real(rk), optional, intent(in) :: c_in
@@ -49,18 +37,14 @@ contains
     if (present(c_in)) c = c_in
     if (present(rho_in)) rho = rho_in
     if (present(sign_dist_tol_in)) sign_dist_tol = sign_dist_tol_in
-    self%configured = .true.
+    configured = .true.
     !
   end subroutine set
-  pure logical(lk) function is_configured(self)
-    class(reinit_t), intent(in) :: self
-    is_configured = self%configured
-  end function is_configured
 !*****************************************************************************80
-  pure subroutine cal_el_cmtx(c3d10,g_mtx,el_cmtx,esta,emsg)
+  pure subroutine cal_fe_cmtx(c3d10,m_gam_mtx,c_mtx,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
-    real(rk), intent(in) :: g_mtx(:,:)
-    real(rk), intent(out) :: el_cmtx(:,:)
+    real(rk), intent(in) :: m_gam_mtx(:,:)
+    real(rk), intent(out) :: c_mtx(:,:)
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
@@ -70,20 +54,20 @@ contains
     real(rk) :: n(nelnod), b(dom,nelnod)
     ! Checks
     if ( debug ) then
-      if ( .not.size_mtx(g_mtx,nelnod,nelnod) ) then
+      if ( .not.size_mtx(m_gam_mtx,nelnod,nelnod) ) then
         esta = -1
         emsg ='Cal el cmtx: G mtx size incorrect'
         return
       end if
       !
-      if ( .not.size_mtx(el_cmtx,nelnod,nelnod) ) then
+      if ( .not.size_mtx(c_mtx,nelnod,nelnod) ) then
         esta = -1
         emsg ='Cal el cmtx: El cmtx size incorrect'
         return
       end if
     end if
     !
-    el_cmtx = 0.0_rk
+    c_mtx = 0.0_rk
     do p = 1, ngp
       ! Set main values
       call c3d10%n_mtx(gp_num=p,n_mtx=n,esta=esta,emsg=emsg)
@@ -93,19 +77,24 @@ contains
       call outer(n,n,rtmp1)
       call gemm(transpose(b),b,rtmp2)
       ! integrate
-      el_cmtx = el_cmtx + ( rtmp1 + d_t * er * rtmp2 +  &
-      & rho * g_mtx )* w(p) * det_jac
+      c_mtx = c_mtx + ( rtmp1 + d_t * er * rtmp2 +  &
+      & rho * m_gam_mtx )* w(p) * det_jac
     end do
     ! Sucess
     esta = 0
     emsg = ''
     !
-  end subroutine cal_el_cmtx
+  end subroutine cal_fe_cmtx
 !*****************************************************************************80
-!  subroutine cmtx_setup(self)
-!    class(reinit_t), intent(inout) :: self
+! M Gamma matrix
+!*****************************************************************************80
+  pure subroutine cal_fe_m_gam()
+  end subroutine cal_fe_m_gam
+
+!*****************************************************************************80
+  subroutine cmtx_setup()
 !    !
-!    integer(ik) :: e, i, j, k, indx
+    integer(ik) :: e, i, j, k, indx
 !    integer(ik) :: num_int
 !    integer(ik) :: el_conn(nnel)
 !    real(rk) :: el_coo(nnel,dom)
@@ -113,12 +102,12 @@ contains
 !    real(rk) :: el_cmtx(nnel,nnel)
 !    real(rk) :: xi_coo(dom), n(nnel)
 !    real(rk), allocatable :: gi_mtx(:,:)
-!    ! allocate a mtx
-!    k = nnel * ( nnel + 1 ) / 2 * nel
+    ! allocate c mtx
+    k = nelnod * ( nelnod + 1 ) / 2 * nfe
 !    call self%c_mtx%alloc('coo',nnod,nnod,k)
 !    ! calculate
-!    indx = 1
-!    do e = 1, nel
+    indx = 1
+    do e = 1, nfe
 !      el_coo = md%get_elcoo(e)
 !      el_conn = md%get_elconn(e)
 !      ! calculate g mtx
@@ -150,13 +139,13 @@ contains
 !          end if
 !        end do
 !      end do
-!    end do
+    end do
 !    ! convert to csr format
 !    call self%c_mtx%csrcoo_conv(2)
 !    ! factorize
 !    call self%lss%alloc(self%c_mtx)
 !    call self%lss%solve(1)
 !    !
-!  end subroutine cmtx_setup
+  end subroutine cmtx_setup
 !*****************************************************************************80
 end module reinitalzation
