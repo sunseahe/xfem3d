@@ -10,12 +10,12 @@ module mesh_data
 !*****************************************************************************80
   character(len=*), parameter :: fe_type = 'c3d10'
   integer(ik), protected :: nnod = 0, nfe = 0
-  real(rk), protected :: char_length = 0.0_rk
+  real(rk), protected :: char_fe_length = 0.0_rk
   type(point_3d_t), allocatable, protected :: nodes(:)
   type(c3d10_t), allocatable, protected :: finite_elements(:)
 !*****************************************************************************80
   public :: fe_type, nnod, nfe, nodes, set_nodes, finite_elements, &
-  & set_finite_elements, mesh_data_finish, mesh_data_statistics
+  & set_finite_elements, mesh_data_finish, mesh_data_statistics, char_fe_length
 !*****************************************************************************80
   contains
 !*****************************************************************************80

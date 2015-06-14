@@ -39,6 +39,7 @@
 		<Unit filename="../src/point.f90" />
 		<Unit filename="../src/read_input.f90" />
 		<Unit filename="../src/reinitalization.f90" />
+		<Unit filename="../src/scalar_field.f90" />
 		<Unit filename="../src/tokenize_string.f90" />
 		<Unit filename="../src/types.f90" />
 		<Unit filename="../src/volume_integral.f90" />

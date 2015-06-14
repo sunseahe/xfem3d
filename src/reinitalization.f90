@@ -5,7 +5,7 @@ module reinitalzation
   use general_routines, only: size_mtx, outer
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
-  use mesh_data, only: nfe
+  use mesh_data, only: nfe, char_fe_length
 !*****************************************************************************80
   implicit none
   private
@@ -41,25 +41,20 @@ contains
     !
   end subroutine set
 !*****************************************************************************80
-  pure subroutine cal_fe_cmtx(c3d10,m_gam_mtx,c_mtx,esta,emsg)
+  pure subroutine cal_fe_cmtx(e,c3d10,c_mtx,esta,emsg)
+    integer(ik), intent(in) :: e
     type(c3d10_t), intent(in) :: c3d10
-    real(rk), intent(in) :: m_gam_mtx(:,:)
     real(rk), intent(out) :: c_mtx(:,:)
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: p
+    real(rk) :: det_jac, sdf_0_val
     real(rk) :: rtmp1(nelnod,nelnod), rtmp2(nelnod,nelnod)
-    real(rk) :: det_jac
+    real(rk) :: m_gam_mtx(nelnod,nelnod)
     real(rk) :: n(nelnod), b(dom,nelnod)
     ! Checks
     if ( debug ) then
-      if ( .not.size_mtx(m_gam_mtx,nelnod,nelnod) ) then
-        esta = -1
-        emsg ='Cal el cmtx: G mtx size incorrect'
-        return
-      end if
-      !
       if ( .not.size_mtx(c_mtx,nelnod,nelnod) ) then
         esta = -1
         emsg ='Cal el cmtx: El cmtx size incorrect'
@@ -76,6 +71,8 @@ contains
       !
       call outer(n,n,rtmp1)
       call gemm(transpose(b),b,rtmp2)
+      ! M gamma
+      m_gam_mtx = rtmp1 * dirac_delta(sdf_0_val)
       ! integrate
       c_mtx = c_mtx + ( rtmp1 + d_t * er * rtmp2 +  &
       & rho * m_gam_mtx )* w(p) * det_jac
@@ -86,13 +83,9 @@ contains
     !
   end subroutine cal_fe_cmtx
 !*****************************************************************************80
-! M Gamma matrix
+! Calculate c mtx
 !*****************************************************************************80
-  pure subroutine cal_fe_m_gam()
-  end subroutine cal_fe_m_gam
-
-!*****************************************************************************80
-  subroutine cmtx_setup()
+  subroutine c_mtx_setup()
 !    !
     integer(ik) :: e, i, j, k, indx
 !    integer(ik) :: num_int
@@ -146,6 +139,21 @@ contains
 !    call self%lss%alloc(self%c_mtx)
 !    call self%lss%solve(1)
 !    !
-  end subroutine cmtx_setup
+  end subroutine c_mtx_setup
+!*****************************************************************************80
+! Dirac delta function
+!*****************************************************************************80
+  pure function dirac_delta(x) result(res)
+    real(rk), intent(in) :: x
+    real(rk) :: res
+    associate( delta => 2.0_rk * char_fe_len )
+    if( abs(x) <= delta ) then
+      res = 3.0_rk / 4.0_rk * delta * &
+      & ( 1.0_rk - x**2 / delta**2 )
+    else
+      res = zero
+    end if
+    end associate
+  end function dirac_delta
 !*****************************************************************************80
 end module reinitalzation
