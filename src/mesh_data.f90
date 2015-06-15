@@ -99,8 +99,6 @@ module mesh_data
     emsg = ''
     !
   end subroutine calc_char_fe_dim
-! Is flush affecting performance?
-! Other alternatives with task.
   subroutine min_char_fe_dim(esta,emsg)
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
