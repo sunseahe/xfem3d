@@ -34,6 +34,7 @@ SRCF = types.f90 \
        fe_c3d4.f90 \
        fe_c3d10.f90 \
        mesh_data.f90 \
+       scalar_field.f90 \
        reinitalization.f90 \
        xfem_tetra.f90 \
        read_input.f90 \

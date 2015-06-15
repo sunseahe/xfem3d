@@ -1,21 +1,21 @@
 module mesh_data
 !*****************************************************************************80
-  use types, only: ik, rk, stdout, int64
+  use types, only: ik, rk, stdout, es, int64
   use memory_storage, only: size_in_bytes, write_size_of_storage
   use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
-  use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll
+  use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll, ngp, w
 !*****************************************************************************80
   implicit none
   private
 !*****************************************************************************80
   character(len=*), parameter :: fe_type = 'c3d10'
   integer(ik), protected :: nnod = 0, nfe = 0
-  real(rk), protected :: char_fe_length = 0.0_rk
+  real(rk), protected :: char_fe_dim = huge(1.0_rk)
   type(point_3d_t), allocatable, protected :: nodes(:)
   type(c3d10_t), allocatable, protected :: finite_elements(:)
 !*****************************************************************************80
   public :: fe_type, nnod, nfe, nodes, set_nodes, finite_elements, &
-  & set_finite_elements, mesh_data_finish, mesh_data_statistics, char_fe_length
+  & set_finite_elements, mesh_data_finish, mesh_data_statistics, char_fe_dim
 !*****************************************************************************80
   contains
 !*****************************************************************************80
@@ -54,11 +54,75 @@ module mesh_data
         finite_elements(i)%nodes(j) = nodes(el_conn(j))
       end do
     end do
+    ! Calculate minimal characteristic dimension
+    call min_char_fe_dim(esta,emsg)
+    if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
     !
   end subroutine set_finite_elements
+!*****************************************************************************80
+! Characteristic finite element dimension
+!*****************************************************************************80
+  pure subroutine calc_char_fe_dim(c3d10,le,esta,emsg)
+    type(c3d10_t), intent(in) :: c3d10
+    real(rk), intent(out) :: le
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    integer(ik) :: a, i, p
+    real(rk) :: det_jac, vol_fe
+    real(rk) :: b(dom,nelnod), usf(dom,nelnod)
+    !
+    vol_fe = 0.0_rk
+    usf = 0.0_rk
+    le = 0.0_rk
+    !
+    do p = 1, ngp
+      call c3d10%gradient(gp_num=p,b_mtx=b,det_jac=det_jac,&
+      &esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
+      !
+      vol_fe = vol_fe + w(p) * det_jac
+      usf = usf + b * w(p) * det_jac
+    end do
+    usf = 1.0_rk / vol_fe * usf
+    do i = 1, dom
+      do a = 1, nelnod
+        le = le + usf(i,a) * usf(i,a)
+      end do
+    end do
+    le = vol_fe / sqrt(le)
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine calc_char_fe_dim
+! Is flush affecting performance?
+! Other alternatives with task.
+  subroutine min_char_fe_dim(esta,emsg)
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    integer(ik) :: e
+    real(rk) :: le_all(nfe)
+    !
+    !$omp parallel do schedule(static,1) &
+    !$omp private(e) &
+    !$omp shared(finite_elements,le_all,esta,emsg)
+    do e = 1, nfe
+      if ( esta == 0 ) then
+        call calc_char_fe_dim(finite_elements(e),le_all(e),esta,emsg)
+      end if
+    end do
+    !$omp end parallel do
+    if ( esta /= 0 ) return
+    char_fe_dim = minval(le_all)
+    ! Sucess
+    esta = 0
+    emsg = ''
+  end subroutine min_char_fe_dim
 !*****************************************************************************80
 ! Read input statistics
 !*****************************************************************************80
@@ -69,6 +133,8 @@ module mesh_data
     write(stdout,'(a)') '*** Mesh data statistics ***'
     write(stdout,'(a,i0)') 'Number of nodes is: ', nnod
     write(stdout,'(a,i0)') 'Number of elements is: ', nfe
+    write(stdout,'(a,'//es//')') 'Characteristic finite element dimension &
+    &is: ', char_fe_dim
     storage = size_in_bytes(nodes) + size_in_bytes(finite_elements)
     write(stdout,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
     &storage))

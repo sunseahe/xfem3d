@@ -5,13 +5,14 @@ module reinitalzation
   use general_routines, only: size_mtx, outer
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
-  use mesh_data, only: nfe, char_fe_length
+  use mesh_data, only: nfe, char_fe_dim
+  use scalar_field, only: scalar_field_t
 !*****************************************************************************80
   implicit none
   private
 !*****************************************************************************80
   logical(lk), protected :: configured = .false.
-  logical(lk) :: par_status = .false. ! Parameters set
+!*****************************************************************************80
   integer(ik) :: num_reinit = 200 ! Number of reinitalization equations
   real(rk) :: alpha = 0.5e0_rk ! Correction to time step
   real(rk) :: d_t = 0.0e0_rk ! Time step
@@ -20,6 +21,8 @@ module reinitalzation
   real(rk) :: rho = 1.0e1_rk ! Enforce Dirichlet boundary
   real(rk) :: sign_dist_tol = 1.0e-3_rk ! Tolerance for convergence
   logical(lk) :: write_par = .false. ! Write parameters to log file
+!*****************************************************************************80
+  type(scalar_field_t), save :: sdf_0
 !*****************************************************************************80
   public :: set, configured
 !*****************************************************************************80
@@ -41,15 +44,14 @@ contains
     !
   end subroutine set
 !*****************************************************************************80
-  pure subroutine cal_fe_cmtx(e,c3d10,c_mtx,esta,emsg)
-    integer(ik), intent(in) :: e
+  pure subroutine calc_fe_cmtx(c3d10,c_mtx,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: c_mtx(:,:)
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: p
-    real(rk) :: det_jac, sdf_0_val
+    real(rk) :: det_jac, sdf_0_gp, sdf_0_nv(nelnod)
     real(rk) :: rtmp1(nelnod,nelnod), rtmp2(nelnod,nelnod)
     real(rk) :: m_gam_mtx(nelnod,nelnod)
     real(rk) :: n(nelnod), b(dom,nelnod)
@@ -66,13 +68,17 @@ contains
     do p = 1, ngp
       ! Set main values
       call c3d10%n_mtx(gp_num=p,n_mtx=n,esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
       call c3d10%gradient(gp_num=p,b_mtx=b,det_jac=det_jac,&
       &esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
       !
       call outer(n,n,rtmp1)
       call gemm(transpose(b),b,rtmp2)
       ! M gamma
-      m_gam_mtx = rtmp1 * dirac_delta(sdf_0_val)
+      call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv,esta,emsg)
+      sdf_0_gp = dot(n,sdf_0_nv)
+      m_gam_mtx = rtmp1 * dirac_delta(sdf_0_gp)
       ! integrate
       c_mtx = c_mtx + ( rtmp1 + d_t * er * rtmp2 +  &
       & rho * m_gam_mtx )* w(p) * det_jac
@@ -81,13 +87,14 @@ contains
     esta = 0
     emsg = ''
     !
-  end subroutine cal_fe_cmtx
+  end subroutine calc_fe_cmtx
 !*****************************************************************************80
 ! Calculate c mtx
 !*****************************************************************************80
   subroutine c_mtx_setup()
 !    !
-    integer(ik) :: e, i, j, k, indx
+    integer(ik) :: e, indx
+    integer(ik) :: c_mtx_size
 !    integer(ik) :: num_int
 !    integer(ik) :: el_conn(nnel)
 !    real(rk) :: el_coo(nnel,dom)
@@ -96,7 +103,7 @@ contains
 !    real(rk) :: xi_coo(dom), n(nnel)
 !    real(rk), allocatable :: gi_mtx(:,:)
     ! allocate c mtx
-    k = nelnod * ( nelnod + 1 ) / 2 * nfe
+    c_mtx_size = nelnod * ( nelnod + 1 ) / 2 * nfe
 !    call self%c_mtx%alloc('coo',nnod,nnod,k)
 !    ! calculate
     indx = 1
@@ -146,12 +153,12 @@ contains
   pure function dirac_delta(x) result(res)
     real(rk), intent(in) :: x
     real(rk) :: res
-    associate( delta => 2.0_rk * char_fe_len )
+    associate( delta => 2.0_rk * char_fe_dim )
     if( abs(x) <= delta ) then
       res = 3.0_rk / 4.0_rk * delta * &
       & ( 1.0_rk - x**2 / delta**2 )
     else
-      res = zero
+      res = 0.0_rk
     end if
     end associate
   end function dirac_delta
