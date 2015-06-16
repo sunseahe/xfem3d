@@ -29,6 +29,7 @@ program xfem_tetra_test
 ! Read data
 !*****************************************************************************80
   call read_data(esta,emsg)
+  if ( esta /= 0 ) call print_error(esta,emsg)
   write(stdout,'(a)') 'Read data complete.'
   if ( debug ) call mesh_data_statistics()
 !*****************************************************************************80

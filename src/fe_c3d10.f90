@@ -147,7 +147,7 @@ contains
     character(len=cl), intent(out) :: emsg
     !
     integer(ik) :: i
-    real(rk) :: xi(dom)
+    real(rk) :: xi(dom), lambda
     logical(lk) :: gp_num_p, xi_coo_p
     !
     gp_num_p = present(gp_num); xi_coo_p = present(xi_coo_pnt)
@@ -189,10 +189,11 @@ contains
     end if
     !
     dn_dxi_mtx = 0.0_rk
+    lambda = 1.0_rk - xi(1) - xi(2) - xi(3)
     !
-    dn_dxi_mtx(1,1) = 1.0_rk-4.0_rk*(1.0_rk-xi(1)-xi(2)-xi(3))
-    dn_dxi_mtx(2,1) = 1.0_rk-4.0_rk*(1.0_rk-xi(1)-xi(2)-xi(3))
-    dn_dxi_mtx(3,1) = 1.0_rk-4.0_rk*(1.0_rk-xi(1)-xi(2)-xi(3))
+    dn_dxi_mtx(1,1) = 1.0_rk-4.0_rk*lambda
+    dn_dxi_mtx(2,1) = 1.0_rk-4.0_rk*lambda
+    dn_dxi_mtx(3,1) = 1.0_rk-4.0_rk*lambda
     !
     dn_dxi_mtx(1,2) = -1.0_rk+4.0_rk*xi(1)
     !
@@ -200,7 +201,7 @@ contains
     !
     dn_dxi_mtx(3,4) = -1.0_rk+4.0_rk*xi(3)
     !
-    dn_dxi_mtx(1,5) = 4.0_rk*xi(1)+4.0_rk*(1.0_rk-xi(1)-xi(2)-xi(3))
+    dn_dxi_mtx(1,5) = 4.0_rk*xi(1)+4.0_rk*lambda
     dn_dxi_mtx(2,5) = 4.0_rk*xi(1)
     dn_dxi_mtx(3,5) = 4.0_rk*xi(1)
     !
@@ -208,12 +209,12 @@ contains
     dn_dxi_mtx(2,6) = 4.0_rk*xi(1)
     !
     dn_dxi_mtx(1,7) = -4.0_rk*xi(2)
-    dn_dxi_mtx(2,7) = -4.0_rk*xi(2)+4.0_rk*(1.0_rk-xi(1)-xi(2)-xi(3))
+    dn_dxi_mtx(2,7) = -4.0_rk*xi(2)+4.0_rk*lambda
     dn_dxi_mtx(3,7) = -4.0_rk*xi(2)
     !
     dn_dxi_mtx(1,8) = -4.0_rk*xi(2)
     dn_dxi_mtx(2,8) = -4.0_rk*xi(2)
-    dn_dxi_mtx(3,8) = -4.0_rk*(1.0_rk-xi(1)-xi(2)-xi(3))-4.0_rk*xi(3)
+    dn_dxi_mtx(3,8) = 4.0_rk*lambda-4.0_rk*xi(3) ! Preveri
     !
     dn_dxi_mtx(1,9) = 4.0_rk*xi(3)
     dn_dxi_mtx(3,9) = 4.0_rk*xi(1)
@@ -272,9 +273,9 @@ contains
     &dn_dxi_mtx=dn_dxi_mtx,esta=esta,emsg=emsg)
     if( esta /= 0 ) return
     do i = 1, nelnod
-      el_coo(i,1:dom) = self%nodes(i)%x
+      el_coo(i,1:dom) = self%nodes(i)%x(1:dom)
     end do
-    CALL gemm(dn_dxi_mtx,el_coo,jac_mtx_int)
+    call gemm(dn_dxi_mtx,el_coo,jac_mtx_int)
     if ( present(jac_mtx) ) jac_mtx = jac_mtx_int
     ! Jacobian determinant
     associate( j => jac_mtx_int )

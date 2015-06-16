@@ -10,7 +10,7 @@ module mesh_data
 !*****************************************************************************80
   character(len=*), parameter :: fe_type = 'c3d10'
   integer(ik), protected :: nnod = 0, nfe = 0
-  real(rk), protected :: char_fe_dim = huge(1.0_rk)
+  real(rk), protected :: char_fe_dim = 0.0_rk
   type(point_3d_t), allocatable, protected :: nodes(:)
   type(c3d10_t), allocatable, protected :: finite_elements(:)
 !*****************************************************************************80
@@ -65,7 +65,7 @@ module mesh_data
 !*****************************************************************************80
 ! Characteristic finite element dimension
 !*****************************************************************************80
-  pure subroutine calc_char_fe_dim(c3d10,le,esta,emsg)
+  subroutine calc_char_fe_dim(c3d10,le,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: le
     integer(ik), intent(out) :: esta
@@ -93,6 +93,7 @@ module mesh_data
         le = le + usf(i,a) * usf(i,a)
       end do
     end do
+    print*, vol_fe
     le = vol_fe / sqrt(le)
     ! Sucess
     esta = 0
@@ -106,15 +107,16 @@ module mesh_data
     integer(ik) :: e
     real(rk) :: le_all(nfe)
     !
-    !$omp parallel do schedule(static,1) &
-    !$omp private(e) &
-    !$omp shared(finite_elements,le_all,esta,emsg)
+    le_all = 0.0_rk
+    !!$omp parallel do schedule(static,1) &
+    !!$omp private(e) &
+    !!$omp shared(finite_elements,le_all,esta,emsg)
     do e = 1, nfe
-      if ( esta == 0 ) then
+      !if ( esta == 0 ) then
         call calc_char_fe_dim(finite_elements(e),le_all(e),esta,emsg)
-      end if
+      !end if
     end do
-    !$omp end parallel do
+    !!$omp end parallel do
     if ( esta /= 0 ) return
     char_fe_dim = minval(le_all)
     ! Sucess
