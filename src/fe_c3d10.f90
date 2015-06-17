@@ -119,17 +119,16 @@ contains
       xi = xi_coo_pnt%x
     end if
     lambda = 1.0_rk - xi(1) - xi(2) - xi(3)
-    n_mtx = [ &
-    & lambda * ( 2.0_rk * lambda - 1.0_rk ), &
-    & xi(1) * ( 2.0_rk * xi(1) - 1.0_rk ), &
-    & xi(2) * ( 2.0_rk * xi(2) - 1.0_rk ), &
-    & xi(3) * ( 2.0_rk * xi(3) - 1.0_rk ), &
-    & 4.0_rk * xi(1) * lambda, &
-    & 4.0_rk * xi(1) * xi(2),  &
-    & 4.0_rk * xi(2) * lambda, &
-    & 4.0_rk * xi(3) * lambda, &
-    & 4.0_rk * xi(1) * xi(3),  &
-    & 4.0_rk * xi(2) * xi(3) ]
+    n_mtx(1) = lambda * ( 2.0_rk * lambda - 1.0_rk )
+    n_mtx(2) = xi(1) * ( 2.0_rk * xi(1) - 1.0_rk )
+    n_mtx(3) = xi(2) * ( 2.0_rk * xi(2) - 1.0_rk )
+    n_mtx(4) = xi(3) * ( 2.0_rk * xi(3) - 1.0_rk )
+    n_mtx(5) = 4.0_rk * xi(1) * lambda
+    n_mtx(6) = 4.0_rk * xi(1) * xi(2)
+    n_mtx(7) = 4.0_rk * xi(2) * lambda
+    n_mtx(8) = 4.0_rk * xi(3) * lambda
+    n_mtx(9) = 4.0_rk * xi(1) * xi(3)
+    n_mtx(10) = 4.0_rk * xi(2) * xi(3)
     ! Sucess
     esta = 0
     emsg = ''
@@ -201,9 +200,9 @@ contains
     !
     dn_dxi_mtx(3,4) = -1.0_rk+4.0_rk*xi(3)
     !
-    dn_dxi_mtx(1,5) = 4.0_rk*xi(1)+4.0_rk*lambda
-    dn_dxi_mtx(2,5) = 4.0_rk*xi(1)
-    dn_dxi_mtx(3,5) = 4.0_rk*xi(1)
+    dn_dxi_mtx(1,5) = -4.0_rk*xi(1)+4.0_rk*lambda
+    dn_dxi_mtx(2,5) = -4.0_rk*xi(1)
+    dn_dxi_mtx(3,5) = -4.0_rk*xi(1)
     !
     dn_dxi_mtx(1,6) = 4.0_rk*xi(2)
     dn_dxi_mtx(2,6) = 4.0_rk*xi(1)
@@ -212,9 +211,9 @@ contains
     dn_dxi_mtx(2,7) = -4.0_rk*xi(2)+4.0_rk*lambda
     dn_dxi_mtx(3,7) = -4.0_rk*xi(2)
     !
-    dn_dxi_mtx(1,8) = -4.0_rk*xi(2)
-    dn_dxi_mtx(2,8) = -4.0_rk*xi(2)
-    dn_dxi_mtx(3,8) = 4.0_rk*lambda-4.0_rk*xi(3) ! Preveri
+    dn_dxi_mtx(1,8) = -4.0_rk*xi(3)
+    dn_dxi_mtx(2,8) = -4.0_rk*xi(3)
+    dn_dxi_mtx(3,8) = 4.0_rk*lambda-4.0_rk*xi(3)
     !
     dn_dxi_mtx(1,9) = 4.0_rk*xi(3)
     dn_dxi_mtx(3,9) = 4.0_rk*xi(1)

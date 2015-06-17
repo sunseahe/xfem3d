@@ -65,7 +65,7 @@ module mesh_data
 !*****************************************************************************80
 ! Characteristic finite element dimension
 !*****************************************************************************80
-  subroutine calc_char_fe_dim(c3d10,le,esta,emsg)
+  pure subroutine calc_char_fe_dim(c3d10,le,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: le
     integer(ik), intent(out) :: esta
@@ -93,7 +93,6 @@ module mesh_data
         le = le + usf(i,a) * usf(i,a)
       end do
     end do
-    print*, vol_fe
     le = vol_fe / sqrt(le)
     ! Sucess
     esta = 0
@@ -108,15 +107,15 @@ module mesh_data
     real(rk) :: le_all(nfe)
     !
     le_all = 0.0_rk
-    !!$omp parallel do schedule(static,1) &
-    !!$omp private(e) &
-    !!$omp shared(finite_elements,le_all,esta,emsg)
+    !$omp parallel do schedule(static,1) &
+    !$omp private(e) &
+    !$omp shared(finite_elements,le_all,esta,emsg)
     do e = 1, nfe
-      !if ( esta == 0 ) then
+      if ( esta == 0 ) then
         call calc_char_fe_dim(finite_elements(e),le_all(e),esta,emsg)
-      !end if
+      end if
     end do
-    !!$omp end parallel do
+    !$omp end parallel do
     if ( esta /= 0 ) return
     char_fe_dim = minval(le_all)
     ! Sucess

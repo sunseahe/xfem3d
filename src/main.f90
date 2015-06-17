@@ -1,6 +1,7 @@
 program xfem_tetra_test
+  use omp_lib, only: omp_get_num_procs, omp_set_num_threads
   use types, only: ik, lk, cl, stdout, stderr, debug
-  use general_routines, only: print_error, to_lower
+  use general_routines, only: print_error, to_lower, str2i
   use read_input, only: read_data, input_file_name, inp_file
   use mesh_data, only: mesh_data_statistics, mesh_data_finish
   use volume_integral, only: test_functions
@@ -11,9 +12,15 @@ program xfem_tetra_test
 !*****************************************************************************80
   logical(lk) :: input_file_given = .false.
 !*****************************************************************************80
+  integer(ik) :: cpus = 1
+  logical(lk) :: cpus_given = .false.
+!*****************************************************************************80
 ! Command line arguments
 !*****************************************************************************80
   call get_command_line_args(esta,emsg)
+  if ( esta /= 0 ) call print_error(esta,emsg)
+  ! Command line checks
+  call command_line_checks(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
   ! Open input file
   inquire(file=input_file_name,exist=input_file_given)
@@ -51,7 +58,6 @@ contains
 ! Check command line arguments
 !*****************************************************************************80
   subroutine get_command_line_args(esta,emsg)
-    !
     integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
     !
@@ -87,6 +93,13 @@ contains
           input_file_name = argval
         end if
         input_file_given = .true.
+      ! Set number of cpus
+      case( '-c', '--cpus')
+        i = i + 1
+        argval = arg_list(i)
+        call str2i(argval,cpus,esta,emsg)
+        if  ( esta /= 0 ) return
+        cpus_given = .true.
       ! Help
       case( '-h', '--help' )
         write(stdout,'(a)') 'No help.'
@@ -96,13 +109,37 @@ contains
       end select
       i = i + 1
     end do
-    !
-    if ( .not. input_file_given ) then
-      write(stdout,'(a)') 'Get command line arguments:&
-      & no input file given'
-    end if
-    !
+    ! Sucess
+    esta = 0
+    emsg = ''
   end subroutine
+!*****************************************************************************80
+  subroutine command_line_checks(esta,emsg)
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik) :: available_cpus
+    ! Check input
+    if ( .not. input_file_given ) then
+      esta = -1
+      emsg = 'Get command line arguments:&
+      & no input file given'
+      return
+    end if
+    ! Check cpus
+    if ( cpus_given ) then
+      available_cpus = omp_get_num_procs() ! Get num of available cpu
+      if ( cpus > available_cpus ) then
+        write(stdout,'(a,i0,a,i0,a)') 'The number of cpus requested (',cpus,&
+        &') exceeds the number of available cpus (',available_cpus,').'
+        cpus = available_cpus
+      end if
+    end if
+    call omp_set_num_threads(cpus)
+    ! Sucess
+    esta = 0
+    emsg = ''
+  end subroutine command_line_checks
 !*****************************************************************************80
 end program
 
