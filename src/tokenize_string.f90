@@ -15,7 +15,7 @@ module tokenize_string
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine tokenize(str,delimiter,words,esta,emsg)
+  pure subroutine tokenize(str,delimiter,words,esta,emsg)
     character(len=*), intent(in) :: str
     character(len=1), intent(in) :: delimiter
     character(len=cl), allocatable, intent(out) :: words(:)
