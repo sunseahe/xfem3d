@@ -30,6 +30,7 @@ SRCF = types.f90 \
        determinant.f90 \
        tokenize_string.f90 \
        lsf_test_functions.f90 \
+       sparse.f90 \
        point.f90 \
        fe_c3d4.f90 \
        fe_c3d10.f90 \

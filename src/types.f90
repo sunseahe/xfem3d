@@ -15,6 +15,7 @@ module types
   private
 !*****************************************************************************80
   integer(ik), parameter :: cl = 256, lk = 4
+  real(rk), parameter :: eps = epsilon(1.0_rk)
 !*****************************************************************************80
 #ifndef DOUBLE
   character(len=*), parameter :: es = 'es14.6e3'
@@ -28,7 +29,7 @@ module types
   logical(lk), parameter :: debug = .true.
 #endif
 !*****************************************************************************80
-  public :: ik, int8, int64, rk, cl, lk, es, stdout, stdin, stderr, debug
+  public :: ik, int8, int64, rk, cl, lk, eps, es, stdout, stdin, stderr, debug
 !*****************************************************************************80
 end module types
 
@@ -47,7 +48,14 @@ module general_routines
   & size_mtx, &
   & exclude, &
   & real_interval, &
-  & outer
+  & outer, &
+  & resize_vec
+!*****************************************************************************80
+  interface resize_vec
+    module procedure :: resize_ivec
+    module procedure :: resize_rvec
+  end interface resize_vec
+!*****************************************************************************80
 contains
 !*****************************************************************************80
 ! Print error
@@ -198,6 +206,41 @@ contains
     res = 0.0_rk
     res = spread(x,dim=2,ncopies=n) * spread(y,dim=1,ncopies=m)
   end subroutine outer
+!*****************************************************************************80
+! Resize vector
+!*****************************************************************************80
+  pure subroutine resize_ivec(n,vec,esta,emsg)
+    integer, intent(in) :: n ! new size
+    integer(ik), allocatable, intent(inout) :: vec(:)  ! input vector
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik), allocatable :: tmp(:)
+    !
+    allocate(tmp,source=vec(1:n),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
+    call move_alloc(from=tmp,to=vec)
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine resize_ivec
+  pure subroutine resize_rvec(n,vec,esta,emsg)
+    integer, intent(in) :: n ! new size
+    real(rk), allocatable, intent(inout) :: vec(:)  ! input vector
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    real(rk), allocatable :: tmp(:)
+    !
+    allocate(tmp,source=vec(1:n),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
+    call move_alloc(from=tmp,to=vec)
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine resize_rvec
 !*****************************************************************************80
 end module general_routines
 

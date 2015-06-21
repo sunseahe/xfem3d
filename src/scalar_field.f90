@@ -6,6 +6,7 @@ module scalar_field
   implicit none
 !*****************************************************************************80
   type :: scalar_field_t
+    private
     real(rk), allocatable :: values(:)
   contains
     procedure :: set
