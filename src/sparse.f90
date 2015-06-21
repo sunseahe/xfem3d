@@ -1,10 +1,14 @@
+include 'mkl_pardiso.f90'
 module sparse
 !*****************************************************************************80
-  use types, only: ik, rk, cl, eps, debug
+  use types, only: ik, rk, lk, cl, eps, debug
   use general_routines, only: resize_vec
+  use mkl_pardiso, only: mkl_pardiso_handle, pardiso
 !*****************************************************************************80
   implicit none
   private
+!*****************************************************************************80
+! Sparse square matrix
 !*****************************************************************************80
   type :: sparse_square_matrix_t
     private
@@ -36,6 +40,23 @@ module sparse
       real(dp) :: acsr(*), acoo(*)
     end subroutine mkl_dcsrcoo
   end interface mkl_csrcoo
+!*****************************************************************************80
+! Sparse linear system
+!*****************************************************************************80
+  type :: sparse_linear_system_t
+    private
+    logical(lk) :: configured = .false.
+    integer(ik) :: iparm(64) = 0
+    type(mkl_pardiso_handle), pointer :: pt(:) => null()
+  contains
+    procedure :: solve => solve_sls
+  end type sparse_linear_system_t
+  ! Solution parameters
+  integer(ik), parameter :: &
+  &  msglvl = 0, & ! No printing of statistical information
+  &  mtype  = 2, & ! Symmetric positive definite
+  &  maxfct = 1, &
+  &  mnum   = 1
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -190,6 +211,73 @@ contains
     if( indx /= 0 ) val_out = self%ax(indx)
     !
   end subroutine get_val_from_indices
-
-
+!*****************************************************************************80
+! Solve routine
+!*****************************************************************************80
+  subroutine solve_sls(self,job,a,b,x,esta,emsg)
+    class(sparse_linear_system_t), intent(inout) :: self
+    integer(ik), intent(in) :: job
+    type(sparse_square_matrix_t), intent(inout) :: a
+    real(rk), optional, intent(inout) :: b(:)
+    real(rk), optional, intent(out) :: x(:)
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik), parameter :: one = 1
+    integer(ik) :: phase, idum(1)
+    real(rk) :: rdum(1)
+    character(len=cl) :: dirname, adit_emsg
+    ! Set solution parameters
+    if ( .not. self%configured ) then
+      allocate(self%pt(64),stat=esta,errmsg=emsg)
+      if ( esta /= 0 ) return
+      self%pt%dummy = 0
+      self%configured = .true.
+    end if
+    idum = 1
+    rdum = 1.0_rk
+    ! Select job
+    associate( pt => self%pt, n => a%n, ai => a%ai, aj => a%aj, ax => a%ax,&
+    & iparm => self%iparm )
+    select case ( job )
+    case ( 1 ) ! Analyse and factorize
+      phase = 12
+      call pardiso(pt,maxfct,mnum,mtype,phase,n,ax,ai,aj,idum, &
+      & one,iparm,msglvl,rdum,rdum,esta)
+      if ( esta /= 0 ) then
+        emsg = 'Solve sls: analyse and factorize error'
+        return
+      end if
+    case ( 3 ) ! Analyse, factorize, store and clean
+      phase = 12
+      call pardiso(pt,maxfct,mnum,mtype,phase,n,ax,ai,aj,idum, &
+      & one,iparm,msglvl,rdum,rdum,esta)
+      if ( esta /= 0 ) then
+        emsg = 'Solve sls: analyse and factorize error'
+        return
+      end if
+      dirname = ''
+      call pardiso_handle_store(pt,dirname,esta)
+      if ( esta /= 0 ) then
+        select case ( esta )
+        case ( -2 )
+          adit_emsg = 'Not enough memory'
+        case ( -10 )
+          adit_emsg = 'Cannot open file for writing'
+        case ( -11 )
+          adit_emsg = 'Error while writing to file'
+        case ( -13 )
+          adit_emsg = 'Wrong file format'
+        end select
+        emsg = 'Solve sls: store data - ' // trim(adit_emsg)
+        return
+      end if
+    case default
+      esta = -1
+      emsg = 'Solve sls: unknown job'
+    end select
+    end associate
+    !
+  end subroutine solve_sls
+!*****************************************************************************80
 end module sparse
