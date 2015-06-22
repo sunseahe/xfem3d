@@ -57,6 +57,8 @@ module sparse
   &  mtype  = 2, & ! Symmetric positive definite
   &  maxfct = 1, &
   &  mnum   = 1
+  ! Paradiso storing routines
+  integer(ik), parameter :: phs = 1, phr = 2, phd = 3
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -214,19 +216,20 @@ contains
 !*****************************************************************************80
 ! Solve routine
 !*****************************************************************************80
-  subroutine solve_sls(self,job,a,b,x,esta,emsg)
+  subroutine solve_sls(self,job,a,b,x,dirname,esta,emsg)
     class(sparse_linear_system_t), intent(inout) :: self
     integer(ik), intent(in) :: job
     type(sparse_square_matrix_t), intent(inout) :: a
     real(rk), optional, intent(inout) :: b(:)
     real(rk), optional, intent(out) :: x(:)
+    character(len=cl), optional, intent(in) :: dirname
     integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
     !
     integer(ik), parameter :: one = 1
     integer(ik) :: phase, idum(1)
     real(rk) :: rdum(1)
-    character(len=cl) :: dirname, adit_emsg
+
     ! Set solution parameters
     if ( .not. self%configured ) then
       allocate(self%pt(64),stat=esta,errmsg=emsg)
@@ -245,7 +248,7 @@ contains
       call pardiso(pt,maxfct,mnum,mtype,phase,n,ax,ai,aj,idum, &
       & one,iparm,msglvl,rdum,rdum,esta)
       if ( esta /= 0 ) then
-        emsg = 'Solve sls: analyse and factorize error'
+        call pardiso_err(esta,emsg)
         return
       end if
     case ( 3 ) ! Analyse, factorize, store and clean
@@ -253,25 +256,29 @@ contains
       call pardiso(pt,maxfct,mnum,mtype,phase,n,ax,ai,aj,idum, &
       & one,iparm,msglvl,rdum,rdum,esta)
       if ( esta /= 0 ) then
-        emsg = 'Solve sls: analyse and factorize error'
+        call pardiso_err(esta,emsg)
         return
       end if
-      dirname = ''
+      ! Store
+      if ( .not. present(dirname) ) then
+        esta = -1
+        emsg = 'Solve sls: directory name not present for storing data'
+        return
+      end if
       call pardiso_handle_store(pt,dirname,esta)
       if ( esta /= 0 ) then
-        select case ( esta )
-        case ( -2 )
-          adit_emsg = 'Not enough memory'
-        case ( -10 )
-          adit_emsg = 'Cannot open file for writing'
-        case ( -11 )
-          adit_emsg = 'Error while writing to file'
-        case ( -13 )
-          adit_emsg = 'Wrong file format'
-        end select
-        emsg = 'Solve sls: store data - ' // trim(adit_emsg)
+        call pardiso_storing_data_err(phs,esta,emsg)
         return
       end if
+      ! Clean
+      phase = -1
+      call pardiso(pt,maxfct,mnum,mtype, phase,n,rdum,idum,idum,idum,one, &
+      & iparm,msglvl,rdum,rdum,esta)
+      if ( esta /= 0 ) then
+        call pardiso_err(esta,emsg)
+        return
+      end if
+      self%configured = .false.
     case default
       esta = -1
       emsg = 'Solve sls: unknown job'
@@ -279,5 +286,79 @@ contains
     end associate
     !
   end subroutine solve_sls
+!*****************************************************************************80
+! Error handling
+!*****************************************************************************80
+  subroutine pardiso_err(esta,emsg)
+    integer(ik), intent(in) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    character(len=cl) :: adit_emsg
+    !
+    select case ( esta )
+    case ( -1 )
+      adit_emsg = 'Input inconsistent'
+    case ( -2 )
+      adit_emsg = 'Not enough memory'
+    case ( -3 )
+      adit_emsg = 'Reordering problem'
+    case ( -4 )
+      adit_emsg = 'Zero pivot, numerical factorization or iterative &
+      &refinement problem'
+    case ( -5 )
+      adit_emsg = 'Unclassified (internal) error'
+    case ( -6 )
+      adit_emsg = 'Reordering failed (matrix types 11 and 13 only)'
+    case ( -7 )
+      adit_emsg = 'Diagonal matrix is singular'
+    case ( -8 )
+      adit_emsg = '32-bit integer overflow problem'
+    case ( -9 )
+      adit_emsg = 'Not enough memory for OOC'
+    case ( -10 )
+      adit_emsg = 'Problems with opening OOC temporary files'
+    case ( -11 )
+      adit_emsg = 'Read/write problems with the OOC data file'
+    case default
+      adit_emsg = 'Unknown error'
+    end select
+    emsg = 'Solve sls: pardiso error - '// trim(adit_emsg)
+    !
+  end subroutine pardiso_err
+!*****************************************************************************80
+  subroutine pardiso_storing_data_err(routine,esta,emsg)
+    integer(ik), intent(in) :: routine
+    integer(ik), intent(in) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    character(len=cl) :: adit_emsg
+    !
+    select case ( esta )
+    case ( -2 )
+      adit_emsg = 'Not enough memory'
+    case ( -10 )
+      select case( routine )
+      case ( 1 )
+        adit_emsg = 'Cannot open file for writing'
+      case ( 2 )
+        adit_emsg = 'Cannot open file for reading'
+      case ( 3 )
+        adit_emsg = 'Cannot delete files'
+      end select
+    case ( -11 )
+      select case( routine )
+      case ( 1 )
+        adit_emsg = 'Error while writing to file'
+      case ( 2 )
+        adit_emsg = 'Error while reading from file'
+      end select
+    case ( -13 )
+      adit_emsg = 'Wrong file format'
+    case default
+      adit_emsg = 'Unknown error'
+    end select
+    emsg = 'Solve sls: store data - ' // trim(adit_emsg)
+    !
+  end subroutine pardiso_storing_data_err
 !*****************************************************************************80
 end module sparse
