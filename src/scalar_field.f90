@@ -11,13 +11,15 @@ module scalar_field
   contains
     procedure :: set
     procedure :: get_element_nodal_values
+    procedure :: copy
+    generic :: assignment(=) => copy
   end type  scalar_field_t
 !*****************************************************************************80
   public :: scalar_field_t
 !*****************************************************************************80
   contains
 !*****************************************************************************80
-  pure subroutine set(self,values,esta,emsg)
+  subroutine set(self,values,esta,emsg)
     class(scalar_field_t), intent(out) :: self
     real(rk), optional, intent(in) :: values(:)
     integer(ik), intent(out) :: esta
@@ -47,6 +49,12 @@ module scalar_field
     emsg = ''
     !
   end subroutine set
+!*****************************************************************************80
+  subroutine copy(self,other)
+    class(scalar_field_t), intent(out) :: self
+    type(scalar_field_t), intent(in) :: other
+    allocate(self%values,source=other%values)
+  end subroutine copy
 !*****************************************************************************80
   pure subroutine get_element_nodal_values(self,c3d10,nodal_values,esta,emsg)
     class(scalar_field_t), intent(in) :: self

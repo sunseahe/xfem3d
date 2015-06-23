@@ -49,7 +49,8 @@ module general_routines
   & exclude, &
   & real_interval, &
   & outer, &
-  & resize_vec
+  & resize_vec, &
+  & pnorm
 !*****************************************************************************80
   interface resize_vec
     module procedure :: resize_ivec
@@ -241,6 +242,15 @@ contains
     emsg = ''
     !
   end subroutine resize_rvec
+!*****************************************************************************80
+! P norm
+!*****************************************************************************80
+  pure function pnorm(p,x) result(res)
+    integer(ik), intent(in) :: p
+    real(rk), intent(in) :: x(:)
+    real(rk) :: res
+    res = (sum(abs(x)**p))**(1.0_rk/p)
+  end function pnorm
 !*****************************************************************************80
 end module general_routines
 

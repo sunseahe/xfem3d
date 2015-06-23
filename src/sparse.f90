@@ -28,14 +28,14 @@ module sparse
 !*****************************************************************************80
   interface mkl_csrcoo
     subroutine mkl_scsrcoo(job,n,acsr,ajr,air,nnz,acoo,ir,jc,info)
-      import :: sp
+      import :: ik, sp
       integer(ik) :: job(8)
       integer(ik) :: n, nnz, info
       integer(ik) :: ajr(*), air(n+1), ir(*), jc(*)
       real(sp) :: acsr(*), acoo(*)
     end subroutine mkl_scsrcoo
     subroutine mkl_dcsrcoo(job,n,acsr,ajr,air,nnz,acoo,ir,jc,info)
-      import :: dp
+      import :: ik, dp
       integer(ik) :: job(8)
       integer(ik) :: n, nnz, info
       integer(ik) :: ajr(*), air(n+1), ir(*), jc(*)
@@ -60,6 +60,8 @@ module sparse
   &  mtype  = 2, & ! Symmetric positive definite
   &  maxfct = 1, &
   &  mnum   = 1
+  ! Paradiso storing routines
+  integer(ik), parameter :: phs = 1, phr = 2, phd = 3
 !*****************************************************************************80
   public :: sparse_square_matrix_t, sparse_linear_system_t
 !*****************************************************************************80
@@ -261,7 +263,7 @@ contains
     integer(ik), parameter :: one = 1
     integer(ik) :: phase, idum(1)
     real(rk) :: rdum(1)
-    character(len=cl) :: dirname, adit_emsg
+
     ! Set solution parameters
     if ( .not. self%configured ) then
       !
@@ -312,7 +314,7 @@ contains
         call pardiso_err(esta,emsg)
         return
       end if
-      if ( present(memory_used) ) memory_used = int(self%iparm(15)*1000,&
+      if ( present(mem_used) ) mem_used = int(self%iparm(15)*1000,&
       & kind=int64)
       self%job_completed = job
 !*****************************************************************************80
@@ -335,8 +337,6 @@ contains
         call pardiso_err(esta,emsg)
         return
       end if
-      if ( present(memory_used) ) memory_used = int(self%iparm(15)*1000,&
-      & kind=int64)
       self%job_completed = job
 !*****************************************************************************80
     case ( 3 ) ! Clean
