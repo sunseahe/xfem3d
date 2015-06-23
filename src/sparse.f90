@@ -1,6 +1,7 @@
 include 'mkl_pardiso.f90'
 module sparse
 !*****************************************************************************80
+  use iso_fortran_env, only: sp => real32, dp => real64, int64
   use types, only: ik, rk, lk, cl, eps, debug
   use general_routines, only: resize_vec
   use mkl_pardiso, only: mkl_pardiso_handle, pardiso
@@ -20,23 +21,24 @@ module sparse
     procedure :: set => set_ssm
     procedure, private :: sum_dup_rm_zero
     procedure :: get_val_from_indices
+    procedure :: delete => delete_ssm
   end type sparse_square_matrix_t
 !*****************************************************************************80
 ! Interface for matrix conversion
 !*****************************************************************************80
   interface mkl_csrcoo
     subroutine mkl_scsrcoo(job,n,acsr,ajr,air,nnz,acoo,ir,jc,info)
-      use iso_fortran_env, only: sp => real32
-      integer  :: job(8)
-      integer  :: n, nnz, info
-      integer  :: ajr(*), air(n+1), ir(*), jc(*)
+      import :: sp
+      integer(ik) :: job(8)
+      integer(ik) :: n, nnz, info
+      integer(ik) :: ajr(*), air(n+1), ir(*), jc(*)
       real(sp) :: acsr(*), acoo(*)
     end subroutine mkl_scsrcoo
     subroutine mkl_dcsrcoo(job,n,acsr,ajr,air,nnz,acoo,ir,jc,info)
-      use iso_fortran_env, only: dp => real64
-      integer  :: job(8)
-      integer  :: n, nnz, info
-      integer  :: ajr(*), air(n+1), ir(*), jc(*)
+      import :: dp
+      integer(ik) :: job(8)
+      integer(ik) :: n, nnz, info
+      integer(ik) :: ajr(*), air(n+1), ir(*), jc(*)
       real(dp) :: acsr(*), acoo(*)
     end subroutine mkl_dcsrcoo
   end interface mkl_csrcoo
@@ -48,6 +50,7 @@ module sparse
     logical(lk) :: configured = .false.
     integer(ik) :: iparm(64) = 0
     type(mkl_pardiso_handle), pointer :: pt(:) => null()
+    integer(ik) :: job_completed = 0
   contains
     procedure :: solve => solve_sls
   end type sparse_linear_system_t
@@ -57,6 +60,8 @@ module sparse
   &  mtype  = 2, & ! Symmetric positive definite
   &  maxfct = 1, &
   &  mnum   = 1
+!*****************************************************************************80
+  public :: sparse_square_matrix_t, sparse_linear_system_t
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -177,18 +182,31 @@ contains
     self%nnz = k
     call resize_vec(k,self%aj,esta,emsg); if ( esta /= 0 ) return
     call resize_vec(k,self%ax,esta,emsg); if ( esta /= 0 ) return
+    ! Sucess
+    esta = 0
+    emsg = ''
     !
   end subroutine sum_dup_rm_zero
 !*****************************************************************************80
 ! Get sparse matrix value from indices
 !*****************************************************************************80
-  pure subroutine get_val_from_indices(self,i,j,val_out,indx)
+  pure subroutine get_val_from_indices(self,i,j,val_out,indx,esta,emsg)
     class(sparse_square_matrix_t), intent(in) :: self
     integer(ik), intent(in) :: i, j != indices
     real(rk), intent(out) :: val_out != output value
     integer(ik), intent(out) :: indx != position
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
     !
     integer(ik) :: ibeg, iend, imid
+    !
+    if ( debug ) then
+      if ( .not. allocated(self%ai) ) then
+        esta = -1
+        emsg = 'Sparse square matrix: not allocated'
+        return
+      end if
+    end if
     !
     val_out = 0.0_rk
     indx = 0
@@ -209,17 +227,34 @@ contains
       end if
     end do search1
     if( indx /= 0 ) val_out = self%ax(indx)
+    ! Sucess
+    esta = 0
+    emsg = ''
     !
   end subroutine get_val_from_indices
 !*****************************************************************************80
+! Delete routine
+!*****************************************************************************80
+  subroutine delete_ssm(self,esta,emsg)
+    class(sparse_square_matrix_t), intent(inout) :: self
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    self%n = 0
+    self%nnz = 0
+    deallocate(self%ai,self%aj,self%ax,stat=esta,errmsg=emsg)
+    !
+  end subroutine delete_ssm
+!*****************************************************************************80
 ! Solve routine
 !*****************************************************************************80
-  subroutine solve_sls(self,job,a,b,x,esta,emsg)
+  subroutine solve_sls(self,job,a,b,x,mem_used,esta,emsg)
     class(sparse_linear_system_t), intent(inout) :: self
     integer(ik), intent(in) :: job
     type(sparse_square_matrix_t), intent(inout) :: a
     real(rk), optional, intent(inout) :: b(:)
     real(rk), optional, intent(out) :: x(:)
+    integer(int64), optional, intent(out) :: mem_used
     integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
     !
@@ -229,55 +264,151 @@ contains
     character(len=cl) :: dirname, adit_emsg
     ! Set solution parameters
     if ( .not. self%configured ) then
+      !
       allocate(self%pt(64),stat=esta,errmsg=emsg)
       if ( esta /= 0 ) return
       self%pt%dummy = 0
+      !
+      self%iparm = 0
+      self%iparm(1) = 1 ! no solver default
+      self%iparm(2) = 2 ! fill-in reordering from METIS
+      self%iparm(4) = 0 ! no iterative-direct algorithm
+      self%iparm(5) = 0 ! no user fill-in reducing permutation
+      self%iparm(6) = 0 ! =0 solution on the first n compoments of x
+      self%iparm(8) = 8 ! numbers of iterative refinement steps
+      self%iparm(10) = 13 ! perturbe the pivot elements with 1E-13
+      self%iparm(11) = 1 ! use nonsymmetric permutation and scaling MPS
+      self%iparm(27) = 1 ! check input values
+#ifndef DOUBLE
+      self%iparm(28) = 1 ! Single precision
+#else
+      self%iparm(28) = 0 ! Double precision
+#endif
+      !
       self%configured = .true.
     end if
     idum = 1
     rdum = 1.0_rk
     ! Select job
-    associate( pt => self%pt, n => a%n, ai => a%ai, aj => a%aj, ax => a%ax,&
-    & iparm => self%iparm )
     select case ( job )
+!*****************************************************************************80
     case ( 1 ) ! Analyse and factorize
+      ! Check if job already done
+      if ( self%job_completed == 0 ) then
+        continue
+      else if ( self%job_completed == 1 ) then
+        esta = 0
+        emsg = ''
+        return
+      else
+        call pardiso_err(-20,emsg)
+        return
+      end if
+      ! Factorize
       phase = 12
-      call pardiso(pt,maxfct,mnum,mtype,phase,n,ax,ai,aj,idum, &
-      & one,iparm,msglvl,rdum,rdum,esta)
+      call pardiso(self%pt,maxfct,mnum,mtype,phase,a%n,a%ax,a%ai,a%aj,idum, &
+      & one,self%iparm,msglvl,rdum,rdum,esta)
       if ( esta /= 0 ) then
-        emsg = 'Solve sls: analyse and factorize error'
+        call pardiso_err(esta,emsg)
         return
       end if
-    case ( 3 ) ! Analyse, factorize, store and clean
-      phase = 12
-      call pardiso(pt,maxfct,mnum,mtype,phase,n,ax,ai,aj,idum, &
-      & one,iparm,msglvl,rdum,rdum,esta)
-      if ( esta /= 0 ) then
-        emsg = 'Solve sls: analyse and factorize error'
+      if ( present(memory_used) ) memory_used = int(self%iparm(15)*1000,&
+      & kind=int64)
+      self%job_completed = job
+!*****************************************************************************80
+   case ( 2 ) ! Solve
+      if ( self%job_completed == 1 ) then
+        continue
+      else
+        call pardiso_err(-20,emsg)
         return
       end if
-      dirname = ''
-      call pardiso_handle_store(pt,dirname,esta)
-      if ( esta /= 0 ) then
-        select case ( esta )
-        case ( -2 )
-          adit_emsg = 'Not enough memory'
-        case ( -10 )
-          adit_emsg = 'Cannot open file for writing'
-        case ( -11 )
-          adit_emsg = 'Error while writing to file'
-        case ( -13 )
-          adit_emsg = 'Wrong file format'
-        end select
-        emsg = 'Solve sls: store data - ' // trim(adit_emsg)
+      if ( .not. present(x) .or. .not. present(b) ) then
+        call pardiso_err(-21,emsg)
         return
       end if
+      ! Solve
+      phase = 33
+      CALL pardiso(self%pt,maxfct,mnum,mtype,phase,a%n,a%ax,a%ai,a%aj, &
+      &idum,one,self%iparm,msglvl,b,x,esta)
+      if ( esta /= 0 ) then
+        call pardiso_err(esta,emsg)
+        return
+      end if
+      if ( present(memory_used) ) memory_used = int(self%iparm(15)*1000,&
+      & kind=int64)
+      self%job_completed = job
+!*****************************************************************************80
+    case ( 3 ) ! Clean
+      if ( self%job_completed == 1 .or. self%job_completed == 2 ) then
+        continue
+      else
+        call pardiso_err(-20,emsg)
+        return
+      end if
+      ! Clean
+      phase = -1
+      CALL pardiso(self%pt,maxfct,mnum,mtype,phase,one,rdum,idum,idum, &
+      & idum,one,self%iparm,msglvl,rdum,rdum,esta)
+      if ( esta /= 0 ) then
+        call pardiso_err(esta,emsg)
+        return
+      end if
+      deallocate(self%pt,stat=esta,errmsg=emsg)
+      if ( esta /= 0 ) return
+      self%job_completed = 0
+      self%configured = .false.
     case default
       esta = -1
       emsg = 'Solve sls: unknown job'
     end select
-    end associate
+    ! Sucess
+    esta = 0
+    emsg = ''
     !
   end subroutine solve_sls
+!*****************************************************************************80
+! Error handling
+!*****************************************************************************80
+  subroutine pardiso_err(esta,emsg)
+    integer(ik), intent(in) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    character(len=cl) :: adit_emsg
+    !
+    select case ( esta )
+    case ( -1 )
+      adit_emsg = 'Input inconsistent'
+    case ( -2 )
+      adit_emsg = 'Not enough memory'
+    case ( -3 )
+      adit_emsg = 'Reordering problem'
+    case ( -4 )
+      adit_emsg = 'Zero pivot, numerical factorization or iterative &
+      &refinement problem'
+    case ( -5 )
+      adit_emsg = 'Unclassified (internal) error'
+    case ( -6 )
+      adit_emsg = 'Reordering failed (matrix types 11 and 13 only)'
+    case ( -7 )
+      adit_emsg = 'Diagonal matrix is singular'
+    case ( -8 )
+      adit_emsg = '32-bit integer overflow problem'
+    case ( -9 )
+      adit_emsg = 'Not enough memory for OOC'
+    case ( -10 )
+      adit_emsg = 'Problems with opening OOC temporary files'
+    case ( -11 )
+      adit_emsg = 'Read/write problems with the OOC data file'
+    case ( -20 )
+      adit_emsg = 'Job not possible'
+    case ( -21 )
+      adit_emsg = 'Rhs vector or solution vector not present'
+    case default
+      adit_emsg = 'Unknown error'
+    end select
+    emsg = 'Solve sls: pardiso error - '// trim(adit_emsg)
+    !
+  end subroutine pardiso_err
 !*****************************************************************************80
 end module sparse
