@@ -96,7 +96,7 @@ contains
   !
   pure subroutine get_first(self,first,esta,emsg)
     class(list), intent(in) :: self
-    class(*), allocatable, intent(out) :: first
+    class(*), allocatable, intent(inout) :: first
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
@@ -112,7 +112,7 @@ contains
   !
   pure subroutine get_current(self,current,esta,emsg)
     class(list), intent(in) :: self
-    class(*), allocatable, intent(out) :: current
+    class(*), allocatable, intent(inout) :: current
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !

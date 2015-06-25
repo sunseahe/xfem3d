@@ -12,6 +12,7 @@ module scalar_field
     procedure :: set
     procedure :: get_element_nodal_values
     procedure :: copy
+    procedure :: assemble_element_nodal_values
     generic :: assignment(=) => copy
   end type  scalar_field_t
 !*****************************************************************************80
@@ -19,8 +20,8 @@ module scalar_field
 !*****************************************************************************80
   contains
 !*****************************************************************************80
-  subroutine set(self,values,esta,emsg)
-    class(scalar_field_t), intent(out) :: self
+  pure subroutine set(self,values,esta,emsg)
+    class(scalar_field_t), intent(inout) :: self
     real(rk), optional, intent(in) :: values(:)
     integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
@@ -50,10 +51,15 @@ module scalar_field
     !
   end subroutine set
 !*****************************************************************************80
-  subroutine copy(self,other)
-    class(scalar_field_t), intent(out) :: self
+  pure subroutine copy(self,other)
+    class(scalar_field_t), intent(inout) :: self
     type(scalar_field_t), intent(in) :: other
-    allocate(self%values,source=other%values)
+    ! Everything must be allocated, to prevent running out of memory
+    if ( .not. allocated (self%values) ) then
+      return
+    end if
+    self%values = other%values
+    !
   end subroutine copy
 !*****************************************************************************80
   pure subroutine get_element_nodal_values(self,c3d10,nodal_values,esta,emsg)
@@ -62,6 +68,8 @@ module scalar_field
     real(rk), intent(out) :: nodal_values(:)
     integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
+    !
+    integer(ik) :: connectivity(nelnod)
     ! Checks
     if ( debug ) then
       if ( .not. size(nodal_values)==nelnod ) then
@@ -76,11 +84,49 @@ module scalar_field
       end if
     end if
     !
-    nodal_values = self%values(c3d10%connectivity)
+    call c3d10%get_connectivity(connectivity,esta,emsg)
+    if ( debug ) then
+      if ( esta /= 0 ) return
+    end if
+    nodal_values = self%values(connectivity)
     ! Sucess
     esta = 0
     emsg = ''
     !
   end subroutine  get_element_nodal_values
+!*****************************************************************************80
+  pure subroutine assemble_element_nodal_values(self,c3d10,nodal_values,&
+  &esta,emsg)
+    class(scalar_field_t), intent(inout) :: self
+    type(c3d10_t), intent(in) :: c3d10
+    real(rk), intent(in) :: nodal_values(:)
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik) :: connectivity(nelnod)
+    !
+    ! Checks
+    if ( debug ) then
+      if ( .not. size(nodal_values)==nelnod ) then
+        esta = -1
+        emsg ='Get element nodal values: vector size incorrect'
+        return
+      end if
+      if ( .not.allocated (self%values) ) then
+        esta = -1
+        emsg ='Get element nodal values: field values not allocated'
+        return
+      end if
+    end if
+    call c3d10%get_connectivity(connectivity,esta,emsg)
+    if ( debug ) then
+      if ( esta /= 0 ) return
+    end if
+    ! Assemble
+    self%values(connectivity) = self%values(connectivity) + nodal_values
+    ! Sucess
+    esta = 0
+    emsg = ''
+  end subroutine assemble_element_nodal_values
 !*****************************************************************************80
 end module scalar_field

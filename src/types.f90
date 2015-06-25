@@ -218,7 +218,7 @@ contains
     !
     integer(ik), allocatable :: tmp(:)
     !
-    allocate(tmp,source=vec(1:n),stat=esta,errmsg=emsg)
+    allocate(tmp(1:n),source=vec(1:n),stat=esta,errmsg=emsg)
     if ( esta /= 0 ) return
     call move_alloc(from=tmp,to=vec)
     ! Sucess
@@ -234,7 +234,7 @@ contains
     !
     real(rk), allocatable :: tmp(:)
     !
-    allocate(tmp,source=vec(1:n),stat=esta,errmsg=emsg)
+    allocate(tmp(1:n),source=vec(1:n),stat=esta,errmsg=emsg)
     if ( esta /= 0 ) return
     call move_alloc(from=tmp,to=vec)
     ! Sucess
@@ -286,9 +286,11 @@ contains
     integer(ik) :: l
     integer(int64) :: length
     integer(int8) :: byte
+    class(*), allocatable :: tmp
     !
     l = lbound(vector,dim=1)
-    length = size(transfer(vector(l),[byte]),kind=int64)
+    allocate(tmp,source=vector(l)) ! Gfortran bug
+    length = size(transfer(tmp,[byte]),kind=int64)
     size_in_bytes_vector = size(vector) * length
     !
   end function size_in_bytes_vector
@@ -299,9 +301,11 @@ contains
     integer(ik) :: l1, l2
     integer(int64) :: length
     integer(int8) :: byte
+    class(*), allocatable :: tmp
     !
     l1 = lbound(matrix,dim=1); l2 = lbound(matrix,dim=2)
-    length = size(transfer(matrix(l1,l2),[byte]),kind=int64)
+    allocate(tmp,source=matrix(l1,l2)) ! Gfortran bug
+    length = size(transfer(tmp,[byte]),kind=int64)
     size_in_bytes_matrix = size(matrix,dim=1) * size(matrix,dim=2) &
     & * length
     !

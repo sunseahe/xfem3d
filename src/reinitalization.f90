@@ -26,6 +26,7 @@ module reinitalzation
 !*****************************************************************************80
   type(scalar_field_t), save :: lsf_0
   type(scalar_field_t), pointer :: sdf => null()
+  type(scalar_field_t), save :: r_vec
 !*****************************************************************************80
   type(sparse_square_matrix_t), save :: c_mtx
   type(sparse_linear_system_t), save :: linear_system
@@ -51,6 +52,8 @@ contains
     configured = .true.
     !
   end subroutine set
+!*****************************************************************************80
+! C matrix fe
 !*****************************************************************************80
   pure subroutine calc_fe_c_mtx(c3d10,c_mtx,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
@@ -153,7 +156,7 @@ contains
     !
   end subroutine c_mtx_setup
 !*****************************************************************************80
-!
+! R vector fe
 !*****************************************************************************80
   pure subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
@@ -215,6 +218,38 @@ contains
     emsg = ''
     !
   end subroutine calc_fe_r_vec
+!*****************************************************************************80
+! Setup r vector
+!*****************************************************************************80
+  subroutine r_vec_setup(esta,emsg)
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    integer(ik) :: e
+    real(rk) :: fe_r_vec(nelnod)
+    !
+    call r_vec%set(esta=esta,emsg=emsg)
+    if ( esta /= 0 ) return
+    !
+    !$omp parallel do schedule(static,1) &
+    !$omp private(e,fe_r_vec) &
+    !$omp shared(finite_elements,esta,emsg)
+    do e = 1, nfe
+      if ( esta == 0 ) then
+        call calc_fe_r_vec(finite_elements(e),fe_r_vec,esta,emsg)
+        !$omp critical
+        call r_vec%assemble_element_nodal_values(finite_elements(e),&
+        &fe_r_vec,esta,emsg)
+        !$omp end critical
+      end if
+    end do
+    !$omp end parallel do
+    if ( esta /= 0 ) return
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine r_vec_setup
 !*****************************************************************************80
 ! Dirac delta function
 !*****************************************************************************80
