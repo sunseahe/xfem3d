@@ -1,9 +1,9 @@
 module read_input
   use types, only: ik, rk, lk, cl, stdout
-  use general_routines, only: str2i, str2r, to_lower
+  use general_routines, only: str2i, str2r, to_lower, strip_char
   use tokenize_string, only: tokenize, comma, equal
-  use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
-  use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll
+  use point, only: dom, zero_pnt, point_3d_t, add_point_3d
+  use fe_c3d10, only: nelnod, c3d10_t, add_c3d10
   use mesh_data, only: fe_type, set_nodes, set_finite_elements
   implicit none
   private
@@ -48,7 +48,8 @@ module read_input
       ! tokenize arguments
       call tokenize(inp_str,comma,keyword_arg,esta,emsg)
       if ( esta /= 0 ) return
-      keyword = keyword_arg(1)(2:) ! First one, without *
+      call strip_char(keyword_arg,'*')
+      keyword = keyword_arg(1) ! Firstone
       select case( keyword )
 !*****************************************************************************80
       case( 'node' )
@@ -109,11 +110,8 @@ module read_input
     real(rk) :: node_coo(dom)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
-    !type(point_3d_t) :: node
     type(point_3d_t), allocatable :: nodes(:)
-    !type(point_3d_t_ll) :: nodes_ll
     !
-    nodes = [ point_3d_t :: ]
     write(stdout,'(a)') 'Reading nodes ...'
     ra: do
       call read_input_string(inp_str,rstat)
@@ -138,13 +136,11 @@ module read_input
         call str2r(read_arg(i),node_coo(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      nodes = [ nodes, point_3d_t(node_coo) ]
-      !call nodes_ll%add(node,esta,emsg); if ( esta /= 0 ) return
+      call add_point_3d(nodes,point_3d_t(x=node_coo),esta,emsg)
+      if ( esta /= 0 ) return
     end do ra
     ! Add nodes
     call set_nodes(nodes)
-    !call set_nodes(nodes_ll,esta,emsg);  if ( esta /= 0 ) return
-    !call nodes_ll%clean(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
@@ -167,7 +163,6 @@ module read_input
     !type(c3d10_t_ll) :: fe_ll
     !
     write(stdout,'(a)') 'Reading connectivity ...'
-    finite_elements = [ c3d10_t :: ]
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -191,16 +186,13 @@ module read_input
         call str2i(read_arg(i),el_conn(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      finite_elements = [ finite_elements, &
-      & c3d10_t(nodes=zero_pnt,connectivity=el_conn) ]
-      !call fe_ll%add(fe,esta,emsg)
-      !if ( esta /= 0 ) return
-      !
+      call add_c3d10(finite_elements,c3d10_t(nodes=zero_pnt,&
+      &connectivity=el_conn),esta,emsg)
+      if ( esta /= 0 ) return
     end do ra
     ! Create element array
     call set_finite_elements(finite_elements,esta,emsg)
     if ( esta /= 0 ) return
-    !call fe_ll%clean(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''

@@ -2,8 +2,8 @@ module mesh_data
 !*****************************************************************************80
   use types, only: ik, rk, stdout, es, int64
   use memory_storage, only: size_in_bytes, write_size_of_storage
-  use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
-  use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll, ngp, w
+  use point, only: dom, zero_pnt, point_3d_t
+  use fe_c3d10, only: nelnod, c3d10_t, ngp, w
 !*****************************************************************************80
   implicit none
   private

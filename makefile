@@ -1,8 +1,8 @@
-#FC = ifort
-FC = gfortran
+FC = ifort
+#FC = gfortran
 
-#CC = icpc
-CC = g++
+CC = icpc
+#CC = g++
 
 #Folders
 src_path = ./src
@@ -26,9 +26,9 @@ vpath %.cpp $(src_path)
 vpath %.f90 $(src_path)
 
 #xfem_tetra.f90 \
+#linked_list.f90 \
 
 SRCF = types.f90 \
-       linked_list.f90 \
        determinant.f90 \
        tokenize_string.f90 \
        lsf_test_functions.f90 \

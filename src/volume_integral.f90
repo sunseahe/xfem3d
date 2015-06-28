@@ -1,7 +1,7 @@
 module volume_integral
   use types, only: ik, rk, lk, cl, stdout
   use point, only: dom, point_3d_t
-  use fe_c3d10, only:  nelnod, c3d10_t, c3d10_t_ll
+  use fe_c3d10, only:  nelnod, c3d10_t
   use mesh_data, only: nodes, nfe, finite_elements
   !use xtet, only: set_sub_xtets
   use lsf_test_functions
@@ -221,7 +221,7 @@ contains
     character(len=*), intent(out) :: emsg
     !
     !integer(ik) :: n
-    real(rk), parameter :: s_1_vol = 0.0334707_rk, s_2_vol = 0.0591926_rk
+    !real(rk), parameter :: s_1_vol = 0.0334707_rk, s_2_vol = 0.0591926_rk
     !real(rk) :: volume
     !character(len=cl) :: gst_inp_file_name
     !

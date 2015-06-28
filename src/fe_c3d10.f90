@@ -2,7 +2,6 @@ module fe_c3d10
 !*****************************************************************************80
   use blas95, only: gemm
   use types, only: ik, rk, cl, lk, stdout, debug
-  use ll, only: list
   use point, only: dom, point_3d_t
   use general_routines, only:  size_mtx, exclude, real_interval, i2str, r2str
 !*****************************************************************************80
@@ -32,14 +31,8 @@ module fe_c3d10
     procedure :: gradient => gradient_c3d10
     procedure :: get_connectivity => get_connectivity_c3d10
   end type c3d10_t
-  type, extends(list) :: c3d10_t_ll
-    private
-  contains
-    procedure :: add => add_c3d10_t_ll
-    procedure :: fill_array => fill_array_c3d10_t_ll
-  end type c3d10_t_ll
 !*****************************************************************************80
-  public :: nelnod, ngp, w, c3d10_t, c3d10_t_ll
+  public :: nelnod, ngp, w, c3d10_t, add_c3d10
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -332,48 +325,29 @@ contains
     !
   end subroutine get_connectivity_c3d10
 !*****************************************************************************80
-! Linked list
+! Add element
 !*****************************************************************************80
-  pure subroutine add_c3d10_t_ll(self,arg,esta,emsg)
-    class(c3d10_t_ll), intent(inout) :: self
-    type(c3d10_t), intent(in) :: arg
+  pure subroutine add_c3d10(vector,element,esta,emsg)
+    type(c3d10_t), allocatable, intent(inout) :: vector(:)
+    type(c3d10_t), intent(in) :: element
     integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
+    character(len=cl), intent(out) :: emsg
     !
-    call self%add_list(arg,esta,emsg)
+    integer(ik) :: n
+    type(c3d10_t), allocatable :: tmp_vector(:)
     !
-  end subroutine add_c3d10_t_ll
-!*****************************************************************************80
-  pure subroutine fill_array_c3d10_t_ll(self,arr,esta,emsg)
-    class(c3d10_t_ll), intent(inout) :: self
-    type(c3d10_t), allocatable, intent(out) :: arr(:)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
-    !
-    integer :: i
-    class(*), allocatable :: curr
-    !
-    if ( self%is_empty() ) then
-      esta = -1
-      emsg = 'Fill array tet dat: list is empty'
-      return
+    if ( allocated(vector) ) then
+      n = size(vector,dim=1)
+      allocate(tmp_vector(n+1),stat=esta,errmsg=emsg)
+      if ( esta /= 0 ) return
+      tmp_vector(1:n) = vector
+      tmp_vector(n+1) = element
+      call move_alloc(tmp_vector,vector)
+    else
+      allocate(vector(1),source=element,stat=esta,errmsg=emsg)
+      if ( esta /= 0 ) return
     end if
-    allocate(arr(self%get_nitem()),stat=esta,errmsg=emsg)
-    if( esta /= 0 ) return
-    call self%reset()
-    do i = 1, self%get_nitem()
-      call self%get_current(curr,esta,emsg)
-      if( esta /= 0 ) return
-      select type(curr)
-      type is( c3d10_t )
-        arr(i) = curr
-      class default
-        esta = -1
-        emsg = 'Fill array tet dat: wrong linked list item.'
-        return
-      end select
-      call self%set_next()
-    end do
-  end subroutine fill_array_c3d10_t_ll
+    !
+  end subroutine add_c3d10
 !*****************************************************************************80
 end module fe_c3d10

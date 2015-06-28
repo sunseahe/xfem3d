@@ -50,7 +50,8 @@ module general_routines
   & real_interval, &
   & outer, &
   & resize_vec, &
-  & pnorm
+  & pnorm, &
+  & strip_char
 !*****************************************************************************80
   interface resize_vec
     module procedure :: resize_ivec
@@ -251,6 +252,26 @@ contains
     real(rk) :: res
     res = (sum(abs(x)**p))**(1.0_rk/p)
   end function pnorm
+!*****************************************************************************80
+! Strip characters
+!*****************************************************************************80
+  elemental pure subroutine strip_char(string,set)
+    character(len=*), intent(inout) :: string
+    character(len=*), intent(in) :: set
+    integer(ik) :: old, new, stride
+    old = 1; new = 1
+    do
+      stride = scan( string( old : ), set )
+      if ( stride > 0 ) then
+        string( new : new+stride-2 ) = string( old : old+stride-2 )
+        old = old+stride
+        new = new+stride-1
+      else
+        string( new : ) = string( old : )
+        return
+      end if
+    end do
+  end subroutine strip_char
 !*****************************************************************************80
 end module general_routines
 

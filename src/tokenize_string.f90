@@ -1,6 +1,5 @@
 module tokenize_string
   use types, only: ik, cl
-  use ll, only: char_ll
   implicit none
   private
 !*****************************************************************************80
@@ -15,7 +14,7 @@ module tokenize_string
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  pure subroutine tokenize(str,delimiter,words,esta,emsg)
+  subroutine tokenize(str,delimiter,words,esta,emsg)
     character(len=*), intent(in) :: str
     character(len=1), intent(in) :: delimiter
     character(len=cl), allocatable, intent(out) :: words(:)
@@ -29,7 +28,6 @@ contains
     ns = len_trim(str); pos1 = 1
     current_word = ''
     !
-    words = [ character(len=cl):: ]
     do i = 1, ns
       if( .not. ( str(i:i) == delimiter ) ) then
         current_word(pos1:pos1) = str(i:i)
@@ -38,9 +36,8 @@ contains
         if( pos1 > 1 ) then
           if( len_trim(current_word) /= 0 ) then
             current_word = adjustl(current_word)
-            words = [ words, current_word ]
-            !call words_list%add(current_word,esta,emsg)
-            !if( esta /= 0 ) return
+            call add_char(words,current_word,esta,emsg)
+            if ( esta /= 0 ) return
           end if
         end if
         current_word = ''
@@ -50,26 +47,41 @@ contains
     ! Set the last word if not empty string
     if( len_trim(current_word) /= 0 ) then
       current_word = adjustl(current_word)
-      words = [ words, current_word ]
-      !call words_list%add(current_word,esta,emsg)
-      !if( esta /= 0 ) return
+      call add_char(words,current_word,esta,emsg)
+      if ( esta /= 0 ) return
     end if
-    ! Copy to array
-!    if( .not. words_list%is_empty() ) then
-!      call words_list%fill_array(words,esta,emsg)
-!      if( esta /= 0 ) return
-!      ! Empty list
-!      call words_list%clean(esta,emsg)
-!      if( esta /= 0 ) return
-!      ! Sucess
-!      esta = 0
-!      emsg = ''
+    ! Empty list
     if ( size(words) == 0 ) then
-      ! Empty list
       esta = 1
       emsg = 'Tokenize: empty list'
     end if
+    ! Sucess
+    esta = 0
+    emsg = ''
     !
   end subroutine tokenize
+!*****************************************************************************80
+  pure subroutine add_char(vector,element,esta,emsg)
+    character(len=cl), allocatable, intent(inout) :: vector(:)
+    character(len=cl), intent(in) :: element
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik) :: n
+    character(len=cl), allocatable :: tmp_vector(:)
+    !
+    if ( allocated(vector) ) then
+      n = size(vector,dim=1)
+      allocate(tmp_vector(n+1),stat=esta,errmsg=emsg)
+      if ( esta /= 0 ) return
+      tmp_vector(1:n) = vector
+      tmp_vector(n+1) = element
+      call move_alloc(tmp_vector,vector)
+    else
+      allocate(vector(1),source=element,stat=esta,errmsg=emsg)
+      if ( esta /= 0 ) return
+    end if
+    !
+  end subroutine add_char
 !*****************************************************************************80
 end module tokenize_string

@@ -2,7 +2,6 @@ module fe_c3d4
 !*****************************************************************************80
   use types,  only: ik, rk, cl, lk, stdout, debug
   use determinant, only: det_sqr_mtx
-  use ll, only: list
   use general_routines, only: exclude, real_interval, i2str, r2str
   use point, only: dom, point_3d_t, zero_pnt
 !*****************************************************************************80
@@ -25,14 +24,8 @@ module fe_c3d4
     procedure :: volume => calculate_tetrahedral_volume
     procedure :: write => write_tet
   end type c3d4_t
-  type, extends(list) :: c3d4_t_ll
-    private
-  contains
-    procedure :: add => add_c3d4_t_ll
-    procedure :: fill_array => fill_array_c3d4_t_ll
-  end type c3d4_t_ll
 !*****************************************************************************80
-  public :: nelnod, c3d4_t, c3d4_t_ll, &
+  public :: nelnod, c3d4_t, &
   & calc_tet_vol, deallocate_tet, calc_tet_strech
 !*****************************************************************************80
   contains
@@ -316,48 +309,6 @@ module fe_c3d4
     emsg = ''
     !
   end subroutine g_coo_tet
-!*****************************************************************************80
-  pure subroutine add_c3d4_t_ll(self,arg,esta,emsg)
-    class(c3d4_t_ll), intent(inout) :: self
-    type(c3d4_t), intent(in) :: arg
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
-    !
-    call self%add_list(arg,esta,emsg)
-    !
-  end subroutine add_c3d4_t_ll
-!*****************************************************************************80
-  pure subroutine fill_array_c3d4_t_ll(self,arr,esta,emsg)
-    class(c3d4_t_ll), intent(inout) :: self
-    type(c3d4_t), allocatable, intent(out) :: arr(:)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
-    !
-    integer :: i
-    class(*), allocatable :: curr
-    !
-    if ( self%is_empty() ) then
-      esta = -1
-      emsg = 'Fill array tet dat: list is empty'
-      return
-    end if
-    allocate(arr(self%get_nitem()),stat=esta,errmsg=emsg)
-    if( esta /= 0 ) return
-    call self%reset()
-    do i = 1, self%get_nitem()
-      call self%get_current(curr,esta,emsg)
-      if( esta /= 0 ) return
-      select type(curr)
-      type is( c3d4_t )
-        arr(i) = curr
-      class default
-        esta = -1
-        emsg = 'Fill array tet dat: wrong linked list item.'
-        return
-      end select
-      call self%set_next()
-    end do
-  end subroutine fill_array_c3d4_t_ll
 !*****************************************************************************80
 end module fe_c3d4
 
