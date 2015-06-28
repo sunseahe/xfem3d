@@ -61,7 +61,7 @@ contains
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p
+    integer(ik) :: p, p_tmp
     real(rk) :: det_jac, lsf_0_gp, lsf_0_nv(nelnod)
     real(rk) :: rtmp1(nelnod,nelnod), rtmp2(nelnod,nelnod)
     real(rk) :: m_gam_mtx(nelnod,nelnod)
@@ -77,10 +77,11 @@ contains
     !
     c_mtx = 0.0_rk
     do p = 1, ngp
+      p_tmp = p ! Gfortran bug
       ! Set main values
-      call c3d10%n_mtx(gp_num=p,n_mtx=n,esta=esta,emsg=emsg)
+      call c3d10%n_mtx(gp_num=p_tmp,n_mtx=n,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
-      call c3d10%gradient(gp_num=p,b_mtx=b,det_jac=det_jac,&
+      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
       &esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
       !
@@ -164,7 +165,7 @@ contains
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p
+    integer(ik) :: p, p_tmp
     real(rk) :: beta1
     real(rk) :: det_jac
     real(rk) :: n(nelnod), b(dom,nelnod), inv_jac_mtx(dom,dom)
@@ -185,10 +186,11 @@ contains
     !
     r1 = 0.0e0_rk; r2 = 0.0e0_rk; r3 = 0.0e0_rk
     do p = 1, ngp
+      p_tmp = p ! Gfortran bug
       ! Set main values
-      call c3d10%n_mtx(gp_num=p,n_mtx=n,esta=esta,emsg=emsg)
+      call c3d10%n_mtx(gp_num=p_tmp,n_mtx=n,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
-      call c3d10%gradient(gp_num=p,b_mtx=b,det_jac=det_jac,&
+      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
       &inv_jac_mtx=inv_jac_mtx,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
       !
@@ -227,7 +229,7 @@ contains
     !
     integer(ik) :: e
     real(rk) :: fe_r_vec(nelnod)
-    !
+    ! Reset the right hand side vector
     call r_vec%set(esta=esta,emsg=emsg)
     if ( esta /= 0 ) return
     !
@@ -250,6 +252,61 @@ contains
     emsg = ''
     !
   end subroutine r_vec_setup
+!*****************************************************************************80
+! Calculate signed distance tolerance
+!*****************************************************************************80
+  pure subroutine calc_fe_sdf_tol(c3d10,sdf_tol,esta,emsg)
+    type(c3d10_t), intent(in) :: c3d10
+    real(rk), intent(out) :: sdf_tol
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    integer(ik) :: p, p_tmp
+    real(rk) :: det_jac
+    real(rk) :: sdf_nv(nelnod), grad_sdf(dom)
+    real(rk) :: b(dom,nelnod)
+    !
+    sdf_tol = 0.0e0_rk
+    do p = 1, ngp
+      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
+      &esta=esta,emsg=emsg)
+      call sdf%get_element_nodal_values(c3d10,sdf_nv,esta,emsg)
+      call gemv(b,sdf_nv,grad_sdf)
+      sdf_tol = sdf_tol + (reg_pnorm(2,grad_sdf) - 1.0e0_rk)**2 &
+      & * w(p) * det_jac
+    end do
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine calc_fe_sdf_tol
+!*****************************************************************************80
+  subroutine calc_sdf_tol(sdf_tol,esta,emsg)
+    real(rk), intent(out) :: sdf_tol
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    integer(ik) :: e
+    real(rk) :: fe_sdf_tol
+    !
+    sdf_tol = 0.0e0_rk
+    !$omp parallel do schedule(static,1)     &
+    !$omp private(e,fe_sdf_tol) &
+    !$omp shared(finite_elements,esta,emsg)
+    do e = 1, nfe
+      call calc_fe_sdf_tol(finite_elements(e),&
+      &fe_sdf_tol,esta,emsg)
+      !$omp critical
+      sdf_tol = sdf_tol + fe_sdf_tol
+      !$omp end critical
+    end do
+    !$omp end parallel do
+    sdf_tol = sqrt( sdf_tol )
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine calc_sdf_tol
 !*****************************************************************************80
 ! Dirac delta function
 !*****************************************************************************80

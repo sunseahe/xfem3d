@@ -313,6 +313,27 @@ contains
     emsg = ''
   end subroutine gradient_c3d10
 !*****************************************************************************80
+! Get connectivity
+!*****************************************************************************80
+  pure subroutine get_connectivity_c3d10(self,connectivity,esta,emsg)
+    class(c3d10_t), intent(in) :: self
+    integer(ik), intent(out) :: connectivity(:)
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    if ( debug ) then
+      if ( size(connectivity) /= nelnod ) then
+        esta = -1
+        emsg = 'Connectivity vector wrong size'
+      end if
+    end if
+    !
+    connectivity = self%connectivity
+    !
+  end subroutine get_connectivity_c3d10
+!*****************************************************************************80
+! Linked list
+!*****************************************************************************80
   pure subroutine add_c3d10_t_ll(self,arg,esta,emsg)
     class(c3d10_t_ll), intent(inout) :: self
     type(c3d10_t), intent(in) :: arg
@@ -355,22 +376,4 @@ contains
     end do
   end subroutine fill_array_c3d10_t_ll
 !*****************************************************************************80
-! Get connectivity
-!*****************************************************************************80
-  pure subroutine get_connectivity_c3d10(self,connectivity,esta,emsg)
-    class(c3d10_t), intent(in) :: self
-    integer(ik), intent(out) :: connectivity(:)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
-    !
-    if ( debug ) then
-      if ( size(connectivity) /= nelnod ) then
-        esta = -1
-        emsg = 'Connectivity vector wrong size'
-      end if
-    end if
-    !
-    connectivity = self%connectivity
-    !
-  end subroutine get_connectivity_c3d10
 end module fe_c3d10

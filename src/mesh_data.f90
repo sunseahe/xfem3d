@@ -21,32 +21,26 @@ module mesh_data
 !*****************************************************************************80
 ! Set nodes
 !*****************************************************************************80
-  subroutine set_nodes(nodes_ll,esta,emsg)
-    type(point_3d_t_ll), intent(inout) :: nodes_ll
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
+  subroutine set_nodes(nodes_in)
+    type(point_3d_t), allocatable, intent(inout) :: nodes_in(:)
     !
-    call nodes_ll%fill_array(nodes,esta,emsg); if ( esta /= 0 ) return
-    nnod = size(nodes)
-    ! Sucess
-    esta = 0
-    emsg = ''
+    nnod = size(nodes_in)
+    call move_alloc(nodes_in,nodes)
     !
   end subroutine set_nodes
 !*****************************************************************************80
 ! Set elements
 !*****************************************************************************80
-  subroutine set_finite_elements(fe_ll,esta,emsg)
-    type(c3d10_t_ll), intent(inout) :: fe_ll
+  subroutine set_finite_elements(finite_elements_in,esta,emsg)
+    type(c3d10_t), allocatable, intent(inout) :: finite_elements_in(:)
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: i, j
     integer(ik) :: el_conn(nelnod)
     !
-    call fe_ll%fill_array(finite_elements,esta,emsg)
-    if ( esta /= 0 ) return
-    nfe = size(finite_elements)
+    nfe = size(finite_elements_in)
+    call move_alloc(finite_elements_in,finite_elements)
     ! Copy nodes to finite elements
     do i = 1, nfe
       el_conn = finite_elements(i)%connectivity
@@ -71,7 +65,7 @@ module mesh_data
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: a, i, p
+    integer(ik) :: a, i, p, p_tmp
     real(rk) :: det_jac, vol_fe
     real(rk) :: b(dom,nelnod), usf(dom,nelnod)
     !
@@ -80,7 +74,8 @@ module mesh_data
     le = 0.0_rk
     !
     do p = 1, ngp
-      call c3d10%gradient(gp_num=p,b_mtx=b,det_jac=det_jac,&
+      p_tmp = p ! Gfortran bug
+      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
       &esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
       !

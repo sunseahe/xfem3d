@@ -13,12 +13,12 @@ module point
   contains
     procedure :: subtract_pnt
     procedure :: dot_pnt
-    procedure :: assign_pnt
+    !procedure :: assign_pnt
     procedure :: norm_pnt
     generic :: operator(-) => subtract_pnt
     generic :: operator(.dot.) => dot_pnt
     generic :: operator(.norm.) => norm_pnt
-    generic :: assignment(=) => assign_pnt
+    !generic :: assignment(=) => assign_pnt
     procedure :: write => write_pnt
   end type point_3d_t
   type, extends(list) :: point_3d_t_ll
@@ -58,11 +58,11 @@ contains
     res = sqrt(sum(self%x - other%x))
   end function norm_pnt
 !*****************************************************************************80
-  pure subroutine assign_pnt(self,other)
-    class(point_3d_t), intent(inout) :: self
-    type(point_3d_t), intent(in) :: other
-    self%x = other%x
-  end subroutine assign_pnt
+!  pure subroutine assign_pnt(self,other)
+!    class(point_3d_t), intent(inout) :: self
+!    type(point_3d_t), intent(in) :: other
+!    self%x = other%x
+!  end subroutine assign_pnt
 !*****************************************************************************80
   subroutine write_pnt(self)
     class(point_3d_t), intent(in) :: self

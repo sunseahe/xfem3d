@@ -24,11 +24,12 @@ contains
     !
     integer(ik) :: i, ns, pos1
     character(len=cl) :: current_word
-    type(char_ll) :: words_list
+    !type(char_ll) :: words_list
     !
     ns = len_trim(str); pos1 = 1
     current_word = ''
     !
+    words = [ character(len=cl):: ]
     do i = 1, ns
       if( .not. ( str(i:i) == delimiter ) ) then
         current_word(pos1:pos1) = str(i:i)
@@ -37,8 +38,9 @@ contains
         if( pos1 > 1 ) then
           if( len_trim(current_word) /= 0 ) then
             current_word = adjustl(current_word)
-            call words_list%add(current_word,esta,emsg)
-            if( esta /= 0 ) return
+            words = [ words, current_word ]
+            !call words_list%add(current_word,esta,emsg)
+            !if( esta /= 0 ) return
           end if
         end if
         current_word = ''
@@ -48,20 +50,21 @@ contains
     ! Set the last word if not empty string
     if( len_trim(current_word) /= 0 ) then
       current_word = adjustl(current_word)
-      call words_list%add(current_word,esta,emsg)
-      if( esta /= 0 ) return
+      words = [ words, current_word ]
+      !call words_list%add(current_word,esta,emsg)
+      !if( esta /= 0 ) return
     end if
     ! Copy to array
-    if( .not. words_list%is_empty() ) then
-      call words_list%fill_array(words,esta,emsg)
-      if( esta /= 0 ) return
-      ! Empty list
-      call words_list%clean(esta,emsg)
-      if( esta /= 0 ) return
-      ! Sucess
-      esta = 0
-      emsg = ''
-    else
+!    if( .not. words_list%is_empty() ) then
+!      call words_list%fill_array(words,esta,emsg)
+!      if( esta /= 0 ) return
+!      ! Empty list
+!      call words_list%clean(esta,emsg)
+!      if( esta /= 0 ) return
+!      ! Sucess
+!      esta = 0
+!      emsg = ''
+    if ( size(words) == 0 ) then
       ! Empty list
       esta = 1
       emsg = 'Tokenize: empty list'

@@ -104,9 +104,17 @@ contains
       esta = -1
       emsg = 'Linked list: no items'
     else
+      if ( allocated(first) ) then
+        deallocate(first,stat=esta,errmsg=emsg)
+        if( esta /= 0 ) return
+      end if
       allocate(first,source=self%head%any_item,&
       &stat=esta,errmsg=emsg)
+      if( esta /= 0 ) return
     end if
+    ! Sucess
+    esta = 0
+    emsg = ''
     !
   end subroutine get_first
   !
@@ -123,6 +131,9 @@ contains
       allocate(current,source=self%current%any_item,&
       &stat=esta,errmsg=emsg)
     end if
+    ! Sucess
+    esta = 0
+    emsg = ''
     !
   end subroutine get_current
   !
@@ -159,7 +170,7 @@ contains
     self%current => null()
     self%tail => null()
     self%nitem = 0
-    !
+    ! Sucess
     esta = 0
     emsg = ''
     !
@@ -205,6 +216,9 @@ contains
       end select
       call self%set_next()
     end do
+    ! Sucess
+    esta = 0
+    emsg = ''
   end subroutine fill_array_char_ll
 !*****************************************************************************80
   pure subroutine add_integer_ll(self,arg,esta,emsg)
@@ -247,6 +261,9 @@ contains
       end select
       call self%set_next()
     end do
+    ! Sucess
+    esta = 0
+    emsg = ''
   end subroutine fill_array_integer_ll
 !*****************************************************************************80
   pure subroutine add_real_ll(self,arg,esta,emsg)
@@ -290,6 +307,9 @@ contains
       end select
       call self%set_next()
     end do
+    ! Sucess
+    esta = 0
+    emsg = ''
   end subroutine fill_array_real_ll
 !*****************************************************************************80
 end module ll

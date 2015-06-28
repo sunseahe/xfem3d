@@ -1,8 +1,8 @@
-FC = ifort
-#FC = gfortran
+#FC = ifort
+FC = gfortran
 
-CC = icpc
-#CC = g++
+#CC = icpc
+CC = g++
 
 #Folders
 src_path = ./src
@@ -25,6 +25,8 @@ CLFLAGSGCC =  -lstdc++ -Wl,-Bdynamic -L$(ABQROOT)/code/bin -lstandardB -lABQSMAO
 vpath %.cpp $(src_path)
 vpath %.f90 $(src_path)
 
+#xfem_tetra.f90 \
+
 SRCF = types.f90 \
        linked_list.f90 \
        determinant.f90 \
@@ -37,7 +39,6 @@ SRCF = types.f90 \
        mesh_data.f90 \
        scalar_field.f90 \
        reinitalization.f90 \
-       xfem_tetra.f90 \
        read_input.f90 \
        write_odb.f90 \
        volume_integral.f90 \
@@ -72,9 +73,9 @@ endif
 #GCC
 ifeq ($(FC),gfortran)
   # fortran
-  all: FCFLAGS = $(FCFLAGSGCC)
+  all: FCFLAGS = $(FCFLAGSGCC) -O2
   all: FLFLAGS = $(FLFLAGSGCC)
-  debug: FCFLAGS += $(FCFLAGSGCC) -g -W -Wall -Wextra -fbounds-check -pedantic -std=f2008 -Wunderflow -O -fbacktrace -ffpe-trap=zero,overflow,underflow -fmax-errors=1 -Wfatal-errors -DDEBUG
+  debug: FCFLAGS += $(FCFLAGSGCC) -g -W -Wall -Wextra -fbounds-check -pedantic -std=f2008 -Wunderflow -O0 -fbacktrace -ffpe-trap=zero,overflow,underflow -fmax-errors=1 -Wfatal-errors -DDEBUG
   debug: FLFLAGS = $(FLFLAGSGCC)
   opt: FCFLAGS += $(FCFLAGSGCC) -O3 -march=native -ffast-math -funroll-loops
   opt: FLFLAGS = $(FLFLAGSGCC)

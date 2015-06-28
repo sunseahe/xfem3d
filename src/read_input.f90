@@ -109,9 +109,11 @@ module read_input
     real(rk) :: node_coo(dom)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
-    type(point_3d_t) :: node
-    type(point_3d_t_ll) :: nodes_ll
+    !type(point_3d_t) :: node
+    type(point_3d_t), allocatable :: nodes(:)
+    !type(point_3d_t_ll) :: nodes_ll
     !
+    nodes = [ point_3d_t :: ]
     write(stdout,'(a)') 'Reading nodes ...'
     ra: do
       call read_input_string(inp_str,rstat)
@@ -136,12 +138,13 @@ module read_input
         call str2r(read_arg(i),node_coo(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      node = point_3d_t(node_coo)
-      call nodes_ll%add(node,esta,emsg); if ( esta /= 0 ) return
+      nodes = [ nodes, point_3d_t(node_coo) ]
+      !call nodes_ll%add(node,esta,emsg); if ( esta /= 0 ) return
     end do ra
     ! Add nodes
-    call set_nodes(nodes_ll,esta,emsg);  if ( esta /= 0 ) return
-    call nodes_ll%clean(esta,emsg); if ( esta /= 0 ) return
+    call set_nodes(nodes)
+    !call set_nodes(nodes_ll,esta,emsg);  if ( esta /= 0 ) return
+    !call nodes_ll%clean(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
@@ -160,11 +163,11 @@ module read_input
     integer(ik) :: el_conn(nelnod)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
-    type(c3d10_t) :: fe
-    type(c3d10_t_ll) :: fe_ll
+    type(c3d10_t), allocatable :: finite_elements(:)
+    !type(c3d10_t_ll) :: fe_ll
     !
     write(stdout,'(a)') 'Reading connectivity ...'
-    !
+    finite_elements = [ c3d10_t :: ]
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -188,14 +191,16 @@ module read_input
         call str2i(read_arg(i),el_conn(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      fe = c3d10_t(nodes=zero_pnt,connectivity=el_conn)
-      call fe_ll%add(fe,esta,emsg)
-      if ( esta /= 0 ) return
+      finite_elements = [ finite_elements, &
+      & c3d10_t(nodes=zero_pnt,connectivity=el_conn) ]
+      !call fe_ll%add(fe,esta,emsg)
+      !if ( esta /= 0 ) return
       !
     end do ra
     ! Create element array
-    call set_finite_elements(fe_ll,esta,emsg); if ( esta /= 0 ) return
-    call fe_ll%clean(esta,emsg); if ( esta /= 0 ) return
+    call set_finite_elements(finite_elements,esta,emsg)
+    if ( esta /= 0 ) return
+    !call fe_ll%clean(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
