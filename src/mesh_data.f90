@@ -21,9 +21,16 @@ module mesh_data
 !*****************************************************************************80
 ! Set nodes
 !*****************************************************************************80
-  subroutine set_nodes(nodes_in)
+  subroutine set_nodes(nodes_in,esta,emsg)
     type(point_3d_t), allocatable, intent(inout) :: nodes_in(:)
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
     !
+    if ( .not. allocated(nodes_in) ) then
+      esta = -1
+      emsg = 'Set nodes: nodes_in not allocated'
+      return
+    end if
     nnod = size(nodes_in)
     call move_alloc(nodes_in,nodes)
     !
@@ -39,6 +46,11 @@ module mesh_data
     integer(ik) :: i, j
     integer(ik) :: el_conn(nelnod)
     !
+    if ( .not. allocated(finite_elements_in) ) then
+      esta = -1
+      emsg = 'Set finite elements: finite_elements_in not allocated'
+      return
+    end if
     nfe = size(finite_elements_in)
     call move_alloc(finite_elements_in,finite_elements)
     ! Copy nodes to finite elements

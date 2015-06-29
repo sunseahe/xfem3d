@@ -137,10 +137,12 @@ module read_input
         if ( esta /= 0 ) return
       end do
       call add_point_3d(nodes,point_3d_t(x=node_coo),esta,emsg)
+      !nodes = [ nodes, point_3d_t(x=node_coo) ]
       if ( esta /= 0 ) return
     end do ra
     ! Add nodes
-    call set_nodes(nodes)
+    call set_nodes(nodes,esta,emsg)
+    if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
@@ -188,6 +190,8 @@ module read_input
       end do
       call add_c3d10(finite_elements,c3d10_t(nodes=zero_pnt,&
       &connectivity=el_conn),esta,emsg)
+      !finite_elements = [ finite_elements, c3d10_t(nodes=zero_pnt,&
+      !&connectivity=el_conn) ]
       if ( esta /= 0 ) return
     end do ra
     ! Create element array
