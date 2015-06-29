@@ -113,6 +113,8 @@ module read_input
     type(point_3d_t), allocatable :: nodes(:)
     !
     write(stdout,'(a)') 'Reading nodes ...'
+    allocate(nodes(0),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -136,9 +138,9 @@ module read_input
         call str2r(read_arg(i),node_coo(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      call add_point_3d(nodes,point_3d_t(x=node_coo),esta,emsg)
-      !nodes = [ nodes, point_3d_t(x=node_coo) ]
-      if ( esta /= 0 ) return
+      !call add_point_3d(nodes,point_3d_t(x=node_coo),esta,emsg)
+      nodes = [ nodes, point_3d_t(x=node_coo) ]
+      !if ( esta /= 0 ) return
     end do ra
     ! Add nodes
     call set_nodes(nodes,esta,emsg)
@@ -165,6 +167,8 @@ module read_input
     !type(c3d10_t_ll) :: fe_ll
     !
     write(stdout,'(a)') 'Reading connectivity ...'
+    allocate(finite_elements(0),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -188,10 +192,10 @@ module read_input
         call str2i(read_arg(i),el_conn(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      call add_c3d10(finite_elements,c3d10_t(nodes=zero_pnt,&
-      &connectivity=el_conn),esta,emsg)
-      !finite_elements = [ finite_elements, c3d10_t(nodes=zero_pnt,&
-      !&connectivity=el_conn) ]
+      !call add_c3d10(finite_elements,c3d10_t(nodes=zero_pnt,&
+      !&connectivity=el_conn),esta,emsg)
+      finite_elements = [ finite_elements, c3d10_t(nodes=zero_pnt,&
+      &connectivity=el_conn) ]
       if ( esta /= 0 ) return
     end do ra
     ! Create element array
