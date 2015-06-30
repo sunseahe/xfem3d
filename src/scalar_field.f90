@@ -6,14 +6,12 @@ module scalar_field
   implicit none
 !*****************************************************************************80
   type :: scalar_field_t
-    private
     real(rk), allocatable :: values(:)
   contains
     procedure :: set
     procedure :: get_element_nodal_values
     procedure :: copy
     procedure :: assemble_element_nodal_values
-    generic :: assignment(=) => copy
   end type  scalar_field_t
 !*****************************************************************************80
   public :: scalar_field_t
@@ -51,14 +49,21 @@ module scalar_field
     !
   end subroutine set
 !*****************************************************************************80
-  pure subroutine copy(self,other)
+  pure subroutine copy(self,other,esta,emsg)
     class(scalar_field_t), intent(inout) :: self
     type(scalar_field_t), intent(in) :: other
-    ! Everything must be allocated, to prevent running out of memory
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik) :: n
+    !
     if ( .not. allocated (self%values) ) then
-      return
+      n = size(other%values)
+      allocate(self%values(n),source=other%values,stat=esta,errmsg=emsg)
+      if ( esta /= 0 ) return
+    else
+      self%values = other%values
     end if
-    self%values = other%values
     !
   end subroutine copy
 !*****************************************************************************80

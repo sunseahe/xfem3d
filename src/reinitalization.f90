@@ -1,8 +1,8 @@
 module reinitalzation
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
-  use types, only: ik, int64, rk, lk, debug, stdout
-  use general_routines, only: size_mtx, outer, pnorm
+  use types, only: ik, int64, rk, lk, es, debug, stdout, nl
+  use general_routines, only: size_mtx, outer, pnorm, time
   use memory_storage, only: size_in_bytes, write_size_of_storage
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
@@ -16,16 +16,18 @@ module reinitalzation
   logical(lk), protected :: configured = .false.
 !*****************************************************************************80
   integer(ik) :: num_reinit = 200 ! Number of reinitalization equations
+  integer(ik) :: num_conv_iter = 3 ! Number of convergence iterations
   real(rk) :: alpha = 0.5e0_rk ! Correction to time step
   real(rk) :: d_t = 0.0e0_rk ! Time step
   real(rk) :: er = 0.0e0_rk
+  logical(lk) :: status_par = .false.
   real(rk) :: c = 1.0e-1_rk ! Diffusion coeficient
   real(rk) :: rho = 1.0e1_rk ! Enforce Dirichlet boundary
   real(rk) :: sign_dist_tol = 1.0e-3_rk ! Tolerance for convergence
   logical(lk) :: write_par = .false. ! Write parameters to log file
 !*****************************************************************************80
-  type(scalar_field_t), save :: lsf_0
-  type(scalar_field_t), pointer :: sdf => null()
+  type(scalar_field_t), save :: sdf_0
+  type(scalar_field_t), save :: sdf
   type(scalar_field_t), save :: r_vec
 !*****************************************************************************80
   type(sparse_square_matrix_t), save :: c_mtx
@@ -37,14 +39,17 @@ module reinitalzation
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine set(alpha_in,c_in,rho_in,num_reinit_in,sign_dist_tol_in)
+  subroutine set(alpha_in,c_in,rho_in,num_reinit_in,num_conv_iter_in,&
+    &sign_dist_tol_in)
     integer(ik), optional, intent(in) :: num_reinit_in
+    integer(ik), optional, intent(in) :: num_conv_iter_in
     real(rk), optional, intent(in) :: alpha_in
     real(rk), optional, intent(in) :: c_in
     real(rk), optional, intent(in) :: rho_in
     real(rk), optional, intent(in) :: sign_dist_tol_in
     ! set parameters
     if (present(num_reinit_in)) num_reinit = num_reinit_in
+    if (present(num_conv_iter_in)) num_conv_iter = num_conv_iter_in
     if (present(alpha_in)) alpha = alpha_in
     if (present(c_in)) c = c_in
     if (present(rho_in)) rho = rho_in
@@ -62,7 +67,7 @@ contains
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: p, p_tmp
-    real(rk) :: det_jac, lsf_0_gp, lsf_0_nv(nelnod)
+    real(rk) :: det_jac, sdf_0_gp, sdf_0_nv(nelnod)
     real(rk) :: rtmp1(nelnod,nelnod), rtmp2(nelnod,nelnod)
     real(rk) :: m_gam_mtx(nelnod,nelnod)
     real(rk) :: n(nelnod), b(dom,nelnod)
@@ -88,9 +93,9 @@ contains
       call outer(n,n,rtmp1)
       call gemm(transpose(b),b,rtmp2)
       ! M gamma
-      call lsf_0%get_element_nodal_values(c3d10,lsf_0_nv,esta,emsg)
-      lsf_0_gp = dot(n,lsf_0_nv)
-      m_gam_mtx = rtmp1 * dirac_delta(lsf_0_gp)
+      call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv,esta,emsg)
+      sdf_0_gp = dot(n,sdf_0_nv)
+      m_gam_mtx = rtmp1 * dirac_delta(sdf_0_gp)
       ! integrate
       c_mtx = c_mtx + ( rtmp1 + d_t * er * rtmp2 +  &
       & rho * m_gam_mtx )* w(p) * det_jac
@@ -113,7 +118,6 @@ contains
     integer(ik), allocatable :: crow(:), ccol(:)
     real(rk) :: fe_c_mtx(nelnod,nelnod)
     real(rk), allocatable :: cx(:)
-
     ! Allocate c mtx coordinate format
     nnz = nelnod * ( nelnod + 1 ) / 2 * nfe
     allocate(crow(nnz),ccol(nnz),cx(nnz),stat=esta,errmsg=emsg)
@@ -169,8 +173,8 @@ contains
     real(rk) :: beta1
     real(rk) :: det_jac
     real(rk) :: n(nelnod), b(dom,nelnod), inv_jac_mtx(dom,dom)
-    real(rk) :: lsf_0_nv(nelnod), sdf_nv(nelnod)
-    real(rk) :: lsf_0_gp, sdf_gp
+    real(rk) :: sdf_0_nv(nelnod), sdf_nv(nelnod)
+    real(rk) :: sdf_0_gp, sdf_gp
     real(rk) :: grad_sdf(dom), norm_sdf(dom)
     real(rk) :: s_0, v(dom), v_tilde(nelnod)
     real(rk) :: rtmp1(dom), rtmp2(nelnod)
@@ -194,13 +198,13 @@ contains
       &inv_jac_mtx=inv_jac_mtx,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
       !
-      call lsf_0%get_element_nodal_values(c3d10,lsf_0_nv,esta,emsg)
+      call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv,esta,emsg)
       call sdf%get_element_nodal_values(c3d10,sdf_nv,esta,emsg)
-      lsf_0_gp = dot(n,lsf_0_nv)
+      sdf_0_gp = dot(n,sdf_0_nv)
       sdf_gp = dot(n,sdf_nv)
       call gemv(b,sdf_nv,grad_sdf)
       norm_sdf = + grad_sdf / reg_pnorm(2,grad_sdf)
-      s_0 = smooth_sign(lsf_0_gp)
+      s_0 = smooth_sign(sdf_0_gp)
       v = s_0 * norm_sdf
       !
       call gemv(inv_jac_mtx,v,rtmp1)
@@ -307,6 +311,106 @@ contains
     emsg = ''
     !
   end subroutine calc_sdf_tol
+!*****************************************************************************80
+! Calculate reinitalization
+!*****************************************************************************80
+  subroutine calculate_reinitalization(sdf_inout,esta,emsg)
+    type(scalar_field_t), intent(inout) :: sdf_inout
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
+    !
+    integer(ik) :: i
+    integer(ik) :: conv_iter
+    real(rk) :: sd_tol_previous, sd_tol_current, rel_tol
+    logical(lk) :: converged
+    type(time) :: t
+    ! Check
+    if ( .not. configured ) then
+      esta = -1
+      emsg = 'Reinitalization procedure not configured'
+      return
+    end if
+    ! Copy scalar fields
+    call sdf_0%copy(sdf_inout,esta,emsg)
+    if ( esta /= 0 ) return
+    call sdf%copy(sdf_inout,esta,emsg)
+    if ( esta /= 0 ) return
+    ! Setup parameters
+    if ( .not. status_par ) then
+      d_t = alpha * char_fe_dim
+      er = c * char_fe_dim**2 / d_t
+      status_par = .true.
+    end if
+    ! Parameters
+    if ( .not.write_par ) then
+      write(stdout,'(a)')         'Solution parameters '
+      write(stdout,'(a,i0)')      ' - num of steps is: ', num_reinit
+      write(stdout,'(a,'//es//')') ' - stable time inc is: ', d_t
+      write(stdout,'(a,'//es//')') ' - step corr par is: ', alpha
+      write(stdout,'(a,'//es//')') ' - diffusion par is: ', c
+      write(stdout,'(a,'//es//')') ' - enforce dirchlet: ', rho
+      write(stdout,'(a,'//es//')') ' - solution tolerance: ', sign_dist_tol
+      write_par = .true.
+    end if
+    ! Solve
+    write(stdout,'(a)') 'Solving reinitalization equation ...'
+    call t%start_timer()
+    ! Calculate c matrix
+    call c_mtx_setup(esta,emsg)
+    if ( esta /= 0 ) return
+    ! Set up right hand side vector
+    call r_vec%set(esta=esta,emsg=emsg)
+    if ( esta /= 0 ) return
+    !
+    sd_tol_previous = huge(1.0_rk)
+    converged = .false.
+    conv_iter = 0
+    do i = 1, num_reinit
+      call r_vec_setup(esta,emsg)
+      if ( esta /= 0 ) return
+      ! Backsubstitution
+      call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=sdf%values&
+      &,esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
+      ! Check for convergence
+      call calc_sdf_tol(sd_tol_current,esta,emsg)
+      if ( esta /= 0 ) return
+      rel_tol = abs(sd_tol_current-sd_tol_previous) / sd_tol_current
+      if( rel_tol <= sign_dist_tol ) then
+        conv_iter = conv_iter + 1
+        if( conv_iter >= num_conv_iter ) then
+          converged = .true.
+          exit
+        end if
+      else
+        conv_iter = 0
+      end if
+      sd_tol_previous = sd_tol_current
+    end do
+    ! Write status
+    if ( .not. converged ) then
+      write(stdout,'(a,'//es//',a,i0,a,a,a,'//es//',a)') &
+      & '**Warning: solution relative tolerance (', rel_tol, &
+      & ' ) after ', num_reinit , ' iterations, ', nl, 'is larger than &
+      & specified (', sign_dist_tol ,' ).'
+    else
+      write(stdout,'(a,'//es//',a,a,a,'//es//',a,i0,a)') &
+      & 'Acheved a value of ', sd_tol_current,' for signed distance &
+      &approximation and', nl, 'relative tolerance of ', rel_tol, ' in ', i, &
+      & ' iterations.'
+    end if
+    write(stdout,'(a,'//es//',a)') 'Solution complete, elapsed &
+    &time', t%elapsed_time(), ' s.'
+    ! Clean linear system and c matrix
+    call linear_system%solve(job=3,a=c_mtx,esta=esta,emsg=emsg)
+    if ( esta /= 0 ) return
+    call c_mtx%delete(esta,emsg)
+    if ( esta /= 0 ) return
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine calculate_reinitalization
 !*****************************************************************************80
 ! Dirac delta function
 !*****************************************************************************80

@@ -29,14 +29,45 @@ module types
   logical(lk), parameter :: debug = .true.
 #endif
 !*****************************************************************************80
-  public :: ik, int8, int64, rk, cl, lk, eps, es, stdout, stdin, stderr, debug
+  character(len=1), parameter :: nl = achar(10)
+!*****************************************************************************80
+  public :: ik, &
+  & int8, &
+  & int64, &
+  & rk, &
+  & cl, &
+  & lk, &
+  & eps, &
+  & es, &
+  & stdout, &
+  & stdin, &
+  & stderr, &
+  & debug, &
+  & nl
 !*****************************************************************************80
 end module types
 
 module general_routines
+!*****************************************************************************80
   use types, only: ik, rk, cl, lk, es, stderr
+!*****************************************************************************80
   implicit none
   private
+!*****************************************************************************80
+  type :: time
+    real(rk) :: saved_time
+    contains
+      procedure :: start_timer => start_timer_sub
+      procedure :: elapsed_time => elapsed_time_fnk
+      procedure, nopass, private :: ctime_fnk
+      procedure, nopass :: print_time => print_time_fnk
+  end type time
+!*****************************************************************************80
+  interface resize_vec
+    module procedure :: resize_ivec
+    module procedure :: resize_rvec
+  end interface resize_vec
+!*****************************************************************************80
   public :: to_lower, &
   & str2i, &
   & i2str, &
@@ -51,12 +82,8 @@ module general_routines
   & outer, &
   & resize_vec, &
   & pnorm, &
-  & strip_char
-!*****************************************************************************80
-  interface resize_vec
-    module procedure :: resize_ivec
-    module procedure :: resize_rvec
-  end interface resize_vec
+  & strip_char, &
+  & time
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -272,6 +299,34 @@ contains
       end if
     end do
   end subroutine strip_char
+!*****************************************************************************80
+! Time routines
+!*****************************************************************************80
+  subroutine start_timer_sub(self)
+    class(time), intent(inout) :: self
+    self%saved_time = self%ctime_fnk()
+  end subroutine start_timer_sub
+!
+  function elapsed_time_fnk(self) result(elapsed_time)
+    class(time), intent(inout) :: self
+    real(rk) :: elapsed_time
+    elapsed_time = self%ctime_fnk() - self%saved_time
+  end function elapsed_time_fnk
+!
+  real(rk) function ctime_fnk()
+    integer :: datetime(8)
+    call date_and_time(values = datetime)
+    ctime_fnk = 86400.0_rk * datetime(3) + 3600.0_rk * datetime(5) &
+    &           + 60.0_rk * datetime(6) + datetime(7) + 0.001_rk * datetime(8)
+  end function ctime_fnk
+!
+  function print_time_fnk() result(print_time)
+    character(len=8) :: print_time
+    integer :: datetime(8)
+    call date_and_time(values = datetime)
+    write(print_time,'(i2.2,a,i2.2,a,i2.2)') datetime(5), ':',&
+    & datetime(6), ':', datetime(7)
+  end function print_time_fnk
 !*****************************************************************************80
 end module general_routines
 

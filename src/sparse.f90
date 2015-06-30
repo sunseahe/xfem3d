@@ -12,7 +12,6 @@ module sparse
 ! Sparse square matrix
 !*****************************************************************************80
   type :: sparse_square_matrix_t
-    private
     integer(ik) :: n ! Size
     integer(ik) :: nnz ! Number of nonzero entries
     integer(ik), allocatable :: ai(:), aj(:) ! CSR format entries
@@ -111,7 +110,7 @@ contains
       if ( esta /= 0 ) return
     end if
     ! Convert
-    CALL mkl_csrcoo(job,self%n,self%ax,self%aj,self%ai, &
+    call mkl_csrcoo(job,self%n,self%ax,self%aj,self%ai, &
     & self%nnz,ax,ar,ac,esta)
     if ( esta /= 0 ) then
       emsg = 'Sparse square matrix: conversion to csr format error'
@@ -263,7 +262,6 @@ contains
     integer(ik), parameter :: one = 1
     integer(ik) :: phase, idum(1)
     real(rk) :: rdum(1)
-
     ! Set solution parameters
     if ( .not. self%configured ) then
       !
@@ -318,7 +316,7 @@ contains
       & kind=int64)
       self%job_completed = job
 !*****************************************************************************80
-   case ( 2 ) ! Solve
+    case ( 2 ) ! Solve
       if ( self%job_completed == 1 ) then
         continue
       else

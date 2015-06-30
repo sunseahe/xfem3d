@@ -28,6 +28,8 @@ contains
     ns = len_trim(str); pos1 = 1
     current_word = ''
     !
+    allocate(words(0),stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
     do i = 1, ns
       if( .not. ( str(i:i) == delimiter ) ) then
         current_word(pos1:pos1) = str(i:i)
@@ -36,8 +38,9 @@ contains
         if( pos1 > 1 ) then
           if( len_trim(current_word) /= 0 ) then
             current_word = adjustl(current_word)
-            call add_char(words,current_word,esta,emsg)
-            if ( esta /= 0 ) return
+            !call add_char(words,current_word,esta,emsg)
+            !if ( esta /= 0 ) return
+            words = [ words, current_word ]
           end if
         end if
         current_word = ''
