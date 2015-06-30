@@ -23,7 +23,6 @@ contains
     !
     integer(ik) :: i, ns, pos1
     character(len=cl) :: current_word
-    !type(char_ll) :: words_list
     !
     ns = len_trim(str); pos1 = 1
     current_word = ''
@@ -38,9 +37,7 @@ contains
         if( pos1 > 1 ) then
           if( len_trim(current_word) /= 0 ) then
             current_word = adjustl(current_word)
-            !call add_char(words,current_word,esta,emsg)
-            !if ( esta /= 0 ) return
-            words = [ words, current_word ]
+            words = [ character(len=cl) :: words, current_word ]
           end if
         end if
         current_word = ''
@@ -50,8 +47,7 @@ contains
     ! Set the last word if not empty string
     if( len_trim(current_word) /= 0 ) then
       current_word = adjustl(current_word)
-      call add_char(words,current_word,esta,emsg)
-      if ( esta /= 0 ) return
+      words = [ character(len=cl) :: words, current_word ]
     end if
     ! Empty list
     if ( size(words) == 0 ) then
@@ -63,28 +59,5 @@ contains
     emsg = ''
     !
   end subroutine tokenize
-!*****************************************************************************80
-  pure subroutine add_char(vector,element,esta,emsg)
-    character(len=cl), allocatable, intent(inout) :: vector(:)
-    character(len=cl), intent(in) :: element
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
-    !
-    integer(ik) :: n
-    character(len=cl), allocatable :: tmp_vector(:)
-    !
-    if ( allocated(vector) ) then
-      n = size(vector,dim=1)
-      allocate(tmp_vector(n+1),stat=esta,errmsg=emsg)
-      if ( esta /= 0 ) return
-      tmp_vector(1:n) = vector
-      tmp_vector(n+1) = element
-      call move_alloc(tmp_vector,vector)
-    else
-      allocate(vector(1),source=element,stat=esta,errmsg=emsg)
-      if ( esta /= 0 ) return
-    end if
-    !
-  end subroutine add_char
 !*****************************************************************************80
 end module tokenize_string

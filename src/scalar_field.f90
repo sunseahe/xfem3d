@@ -73,8 +73,6 @@ module scalar_field
     real(rk), intent(out) :: nodal_values(:)
     integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
-    !
-    integer(ik) :: connectivity(nelnod)
     ! Checks
     if ( debug ) then
       if ( .not. size(nodal_values)==nelnod ) then
@@ -89,11 +87,7 @@ module scalar_field
       end if
     end if
     !
-    call c3d10%get_connectivity(connectivity,esta,emsg)
-    if ( debug ) then
-      if ( esta /= 0 ) return
-    end if
-    nodal_values = self%values(connectivity)
+    nodal_values = self%values(c3d10%connectivity)
     ! Sucess
     esta = 0
     emsg = ''
@@ -107,9 +101,6 @@ module scalar_field
     real(rk), intent(in) :: nodal_values(:)
     integer(ik), intent(out) :: esta
     character(len=cl), intent(out) :: emsg
-    !
-    integer(ik) :: connectivity(nelnod)
-    !
     ! Checks
     if ( debug ) then
       if ( .not. size(nodal_values)==nelnod ) then
@@ -123,12 +114,10 @@ module scalar_field
         return
       end if
     end if
-    call c3d10%get_connectivity(connectivity,esta,emsg)
-    if ( debug ) then
-      if ( esta /= 0 ) return
-    end if
     ! Assemble
-    self%values(connectivity) = self%values(connectivity) + nodal_values
+    associate( c => c3d10%connectivity )
+    self%values(c) = self%values(c) + nodal_values
+    end associate
     ! Sucess
     esta = 0
     emsg = ''

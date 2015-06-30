@@ -114,7 +114,6 @@ contains
     !
     integer(ik) :: e, i, j, indx
     integer(ik) :: nnz
-    integer(ik) :: connectivity(nelnod)
     integer(ik), allocatable :: crow(:), ccol(:)
     real(rk) :: fe_c_mtx(nelnod,nelnod)
     real(rk), allocatable :: cx(:)
@@ -131,18 +130,19 @@ contains
         call calc_fe_c_mtx(finite_elements(e),fe_c_mtx,esta,emsg)
         !$omp critical
         ! Add to sparse matrix
-        call finite_elements(e)%get_connectivity(connectivity,esta,emsg)
+        associate( c => finite_elements(e)%connectivity )
         do i = 1, nelnod
           do j = 1, nelnod
             ! symmetric matrix only upper part
-            if ( connectivity(i) <= connectivity(j) ) then
-              crow(indx) = connectivity(i)
-              ccol(indx) = connectivity(j)
+            if ( c(i) <= c(j) ) then
+              crow(indx) = c(i)
+              ccol(indx) = c(j)
               cx(indx) = fe_c_mtx(i,j)
               indx = indx + 1
             end if
           end do
         end do
+        end associate
         !$omp end critical
       end if
     end do

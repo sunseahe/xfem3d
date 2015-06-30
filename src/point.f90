@@ -22,7 +22,7 @@ module point
   type(point_3d_t), parameter :: zero_pnt = point_3d_t([0.0_rk,0.0_rk, &
   &0.0_rk])
 !*****************************************************************************80
-  public :: dom, zero_pnt, point_3d_t, add_point_3d
+  public :: dom, zero_pnt, point_3d_t
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -56,30 +56,5 @@ contains
     write(stdout,pw,advance='no') 'Point coordinates: (', self%x
     write(stdout,'(a)') ' )'
   end subroutine write_pnt
-!*****************************************************************************80
-! Add point
-!*****************************************************************************80
-  pure subroutine add_point_3d(vector,element,esta,emsg)
-    type(point_3d_t), allocatable, intent(inout) :: vector(:)
-    type(point_3d_t), intent(in) :: element
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
-    !
-    integer(ik) :: n
-    type(point_3d_t), allocatable :: tmp_vector(:)
-    !
-    if ( allocated(vector) ) then
-      n = size(vector,dim=1)
-      allocate(tmp_vector(n+1),stat=esta,errmsg=emsg)
-      if ( esta /= 0 ) return
-      tmp_vector(1:n) = vector
-      tmp_vector(n+1) = element
-      call move_alloc(tmp_vector,vector)
-    else
-      allocate(vector(1),source=element,stat=esta,errmsg=emsg)
-      if ( esta /= 0 ) return
-    end if
-    !
-  end subroutine add_point_3d
 !*****************************************************************************80
 end module point

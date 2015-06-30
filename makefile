@@ -1,8 +1,12 @@
-FC = ifort
-#FC = gfortran
-
-CC = icpc
-#CC = g++
+comp := intel
+ifeq ($(comp),intel)
+  FC = ifort
+  CC = icpc
+endif
+ifeq ($(comp),gcc)
+  FC = gfortran
+  CC = g++
+endif
 
 #Folders
 src_path = ./src
@@ -75,7 +79,7 @@ ifeq ($(FC),gfortran)
   # fortran
   all: FCFLAGS = $(FCFLAGSGCC) -O2
   all: FLFLAGS = $(FLFLAGSGCC)
-  debug: FCFLAGS += $(FCFLAGSGCC) -g -W -Wall -Wextra -fbounds-check -pedantic -std=f2008 -Wunderflow -O0 -fbacktrace -ffpe-trap=zero,overflow,underflow -fmax-errors=1 -Wfatal-errors -DDEBUG
+  debug: FCFLAGS += $(FCFLAGSGCC) -g -W -Wall -Wextra -fbounds-check -pedantic -std=f2008 -O0 -fbacktrace -ffpe-trap=zero,overflow,underflow -fmax-errors=1 -Wfatal-errors -DDEBUG
   debug: FLFLAGS = $(FLFLAGSGCC)
   opt: FCFLAGS += $(FCFLAGSGCC) -O3 -march=native -ffast-math -funroll-loops
   opt: FLFLAGS = $(FLFLAGSGCC)
