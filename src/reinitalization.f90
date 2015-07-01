@@ -27,7 +27,7 @@ module reinitalzation
   logical(lk) :: write_par = .false. ! Write parameters to log file
 !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
-  type(scalar_field_t), save :: sdf
+  type(scalar_field_t), pointer :: sdf => null()
   type(scalar_field_t), save :: r_vec
 !*****************************************************************************80
   type(sparse_square_matrix_t), save :: c_mtx
@@ -35,7 +35,8 @@ module reinitalzation
 !*****************************************************************************80
   integer(int64) :: mem_fac_c_mtx = 0
 !*****************************************************************************80
-  public :: set, configured, reinitalization_statistics
+  public :: set, configured, calculate_reinitalization, &
+  & reinitalization_statistics
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -315,7 +316,7 @@ contains
 ! Calculate reinitalization
 !*****************************************************************************80
   subroutine calculate_reinitalization(sdf_inout,esta,emsg)
-    type(scalar_field_t), intent(inout) :: sdf_inout
+    type(scalar_field_t), target, intent(inout) :: sdf_inout
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
@@ -333,8 +334,7 @@ contains
     ! Copy scalar fields
     call sdf_0%copy(sdf_inout,esta,emsg)
     if ( esta /= 0 ) return
-    call sdf%copy(sdf_inout,esta,emsg)
-    if ( esta /= 0 ) return
+    sdf => sdf_inout
     ! Setup parameters
     if ( .not. status_par ) then
       d_t = alpha * char_fe_dim
@@ -401,11 +401,12 @@ contains
     end if
     write(stdout,'(a,'//es//',a)') 'Solution complete, elapsed &
     &time', t%elapsed_time(), ' s.'
-    ! Clean linear system and c matrix
+    ! Clean
     call linear_system%solve(job=3,a=c_mtx,esta=esta,emsg=emsg)
     if ( esta /= 0 ) return
     call c_mtx%delete(esta,emsg)
     if ( esta /= 0 ) return
+    sdf => null()
     ! Sucess
     esta = 0
     emsg = ''

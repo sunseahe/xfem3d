@@ -2,7 +2,7 @@ module volume_integral
   use types, only: ik, rk, lk, cl, stdout
   use point, only: dom, point_3d_t
   use fe_c3d10, only:  nelnod, c3d10_t
-  use mesh_data, only: nodes, nfe, finite_elements
+  use mesh_data, only: nnod, nodes, nfe, finite_elements
   !use xtet, only: set_sub_xtets
   use lsf_test_functions
   use write_odb, only: start_odb_api, finish_odb_api, write_model_data,  &
@@ -32,7 +32,7 @@ contains
     & field_description = 'Level set function values'
     logical(lk), allocatable :: lsf_field_val_cal(:)
     !
-    allocate(lsf_field(size(nodes)),lsf_field_val_cal(size(nodes)),&
+    allocate(lsf_field(nnod),lsf_field_val_cal(nnod),&
     & stat=esta,errmsg=emsg)
     ! Start odb api
     call start_odb_api()
