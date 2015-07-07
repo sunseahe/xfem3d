@@ -18,8 +18,8 @@ module reinitalzation
   integer(ik) :: num_reinit = 200 ! Number of reinitalization equations
   integer(ik) :: num_conv_iter = 3 ! Number of convergence iterations
   real(rk) :: alpha = 0.5e0_rk ! Correction to time step
-  real(rk) :: d_t = 0.0e0_rk ! Time step
-  real(rk) :: er = 0.0e0_rk
+  real(rk) :: d_t = 0.0e0_rk ! Time step - to be calculated
+  real(rk) :: er = 0.0e0_rk ! Diffusion related - to be calculated
   logical(lk) :: status_par = .false.
   real(rk) :: c = 1.0e-1_rk ! Diffusion coeficient
   real(rk) :: rho = 1.0e1_rk ! Enforce Dirichlet boundary
@@ -35,13 +35,13 @@ module reinitalzation
 !*****************************************************************************80
   integer(int64) :: mem_fac_c_mtx = 0
 !*****************************************************************************80
-  public :: set, configured, calculate_reinitalization, &
+  public :: set_reinitalization, configured, calculate_reinitalization, &
   & reinitalization_statistics
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine set(alpha_in,c_in,rho_in,num_reinit_in,num_conv_iter_in,&
-    &sign_dist_tol_in)
+  subroutine set_reinitalization(alpha_in,c_in,rho_in,num_reinit_in,&
+    &num_conv_iter_in,sign_dist_tol_in)
     integer(ik), optional, intent(in) :: num_reinit_in
     integer(ik), optional, intent(in) :: num_conv_iter_in
     real(rk), optional, intent(in) :: alpha_in
@@ -57,7 +57,7 @@ contains
     if (present(sign_dist_tol_in)) sign_dist_tol = sign_dist_tol_in
     configured = .true.
     !
-  end subroutine set
+  end subroutine set_reinitalization
 !*****************************************************************************80
 ! C matrix fe
 !*****************************************************************************80

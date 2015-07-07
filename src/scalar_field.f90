@@ -9,6 +9,7 @@ module scalar_field
     real(rk), allocatable :: values(:)
   contains
     procedure :: set
+    procedure :: set_nodal_value
     procedure :: get_element_nodal_values
     procedure :: copy
     procedure :: assemble_element_nodal_values
@@ -66,6 +67,33 @@ module scalar_field
     end if
     !
   end subroutine copy
+!*****************************************************************************80
+  pure subroutine set_nodal_value(self,n,nodal_value,esta,emsg)
+    class(scalar_field_t), intent(inout) :: self
+    integer(ik), intent(in) :: n
+    real(rk), intent(in) :: nodal_value
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    if ( debug ) then
+      if ( .not.allocated (self%values) ) then
+        esta = -1
+        emsg ='Set nodal value: field values not allocated'
+        return
+      end if
+      if ( n > size(self%values) ) then
+        esta = -1
+        emsg ='Set nodal value: node not found'
+        return
+      end if
+    end if
+    !
+    self%values(n) = nodal_value
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine set_nodal_value
 !*****************************************************************************80
   pure subroutine get_element_nodal_values(self,c3d10,nodal_values,esta,emsg)
     class(scalar_field_t), intent(in) :: self

@@ -1,10 +1,13 @@
 module read_input
+!*****************************************************************************80
   use types, only: ik, rk, lk, cl, stdout
   use general_routines, only: str2i, str2r, to_lower, strip_char
   use tokenize_string, only: tokenize, comma, equal
   use point, only: dom, zero_pnt, point_3d_t
   use fe_c3d10, only: nelnod, c3d10_t
   use mesh_data, only: fe_type, set_nodes, set_finite_elements
+  use reinitalzation, only: set_reinitalization
+!*****************************************************************************80
   implicit none
   private
 !*****************************************************************************80
@@ -86,6 +89,9 @@ module read_input
           return
         end if
 !*****************************************************************************80
+      case ( 'reinitalization' )
+        call read_reinitalization(esta,emsg); if ( esta /= 0 ) return
+!*****************************************************************************80
       case default
         esta = -1
         emsg = 'Read data: unknown keyword >' // trim(keyword) // '<'
@@ -162,7 +168,6 @@ module read_input
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
     type(c3d10_t), allocatable :: finite_elements(:)
-    !type(c3d10_t_ll) :: fe_ll
     !
     write(stdout,'(a)') 'Reading connectivity ...'
     allocate(finite_elements(0),stat=esta,errmsg=emsg)
@@ -202,6 +207,79 @@ module read_input
     emsg = ''
     !
   end subroutine read_connectivity
+!*****************************************************************************80
+! Read reinitalization
+!*****************************************************************************80
+    subroutine read_reinitalization(esta,emsg)
+      !
+      integer(ik), intent(out) :: esta
+      character(len=*), intent(out) :: emsg
+      !
+      integer(ik) :: i, n
+      integer(ik) :: int_read
+      integer(ik) :: rstat
+      real(rk) :: real_read
+      character(len=*), parameter :: w1 = 'Preprocess: reinitalization &
+      &equation - '
+      character(len=cl) :: inp_str
+      character(len=cl), allocatable :: read_arg(:), arg_val(:)
+      !
+      write(stdout,'(a)') 'Reading reinitalization parameters ...'
+      call set_reinitalization() ! default reinitalization parameters
+      ra: do
+        call read_input_string(inp_str,rstat)
+        select case(rstat)
+        case( 0 )
+          exit ra
+        case( 1 ); cycle ra
+        case( 2 )
+          backspace(inp_file)
+          exit ra
+        case( 3 ); continue
+        end select
+        ! tokenize arguments
+        call tokenize(inp_str,comma,read_arg,esta,emsg)
+        if ( esta /= 0 ) return
+        ! Check arguments
+        n = size(read_arg)
+        carg: do i = 1, n
+          call tokenize(read_arg(i),equal,arg_val,esta,emsg)
+          if ( esta /= 0 ) return
+          select case( arg_val(1) )
+            case ('number of reinitalization equations')
+              call str2i(arg_val(2),int_read,esta,emsg)
+              if ( esta /= 0 ) return
+              call set_reinitalization(num_reinit_in=int_read)
+            case ( 'number of convergence iterations')
+              call str2i(arg_val(2),int_read,esta,emsg)
+              if ( esta /= 0 ) return
+              call set_reinitalization(num_conv_iter_in=int_read)
+            case ('correction to timestep')
+              call str2r(arg_val(2),real_read,esta,emsg)
+              if ( esta /= 0 ) return
+              call set_reinitalization(alpha_in=real_read)
+            case ('diffusion coefficient')
+              call str2r(arg_val(2),real_read,esta,emsg)
+              if ( esta /= 0 ) return
+              call set_reinitalization(c_in=real_read)
+            case ('enforce dirichlet boundary coefficient')
+              call str2r(arg_val(2),real_read,esta,emsg)
+              if ( esta /= 0 ) return
+              call set_reinitalization(rho_in=real_read)
+            case ('signed distance function tolerance')
+              call str2r(arg_val(2),real_read,esta,emsg)
+               if ( esta /= 0 ) return
+              call set_reinitalization(sign_dist_tol_in=real_read)
+            case default
+              esta = -1
+              emsg =  w1 // 'unknown value >' // trim(arg_val(1)) // '<'
+              exit carg
+          end select
+        end do carg
+        !
+      end do ra
+      !
+    end subroutine read_reinitalization
 !*****************************************************************************80
 ! Input string read in keywords
 !*****************************************************************************80

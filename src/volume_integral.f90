@@ -3,13 +3,16 @@ module volume_integral
   use point, only: dom, point_3d_t
   use fe_c3d10, only:  nelnod, c3d10_t
   use mesh_data, only: nnod, nodes, nfe, finite_elements
+  use scalar_field, only: scalar_field_t
   !use xtet, only: set_sub_xtets
   use lsf_test_functions
   use write_odb, only: start_odb_api, finish_odb_api, write_model_data,  &
   & create_step, create_frame, write_scalar_field, close_odb_file
   use read_input, only: input_file_name
-  use reinitalzation, only:
+  use reinitalzation, only: calculate_reinitalization
+!*****************************************************************************80
   implicit none
+  private
 !*****************************************************************************80
   ! For writing in input file and checking global sub tets
   integer(ik) :: gst_inp_file = 0
@@ -28,13 +31,12 @@ contains
     integer(ik) :: e, i
     integer(ik) :: active_node
     real(rk) :: x(dom)
-    real(rk), allocatable :: lsf_field(:)
+    type(scalar_field_t) :: lsf
     character(len=cl), parameter :: step = 'Test step', field_name = 'LSF', &
     & field_description = 'Level set function values'
     logical(lk), allocatable :: lsf_field_val_cal(:)
-    !
-    allocate(lsf_field(nnod),lsf_field_val_cal(nnod),&
-    & stat=esta,errmsg=emsg)
+    ! Allocate already calculated values
+    allocate(lsf_field_val_cal(nnod),stat=esta,errmsg=emsg)
     ! Start odb api
     call start_odb_api()
     ! Model data
@@ -76,7 +78,8 @@ contains
       call create_frame(step,name,frame_num,time,&
       &esta,emsg)
       if ( esta /= 0 ) return
-      lsf_field = 0.0_rk
+      ! Reset lsf field
+      call lsf%set(esta=esta,emsg=emsg); if( esta /= 0 ) return
       lsf_field_val_cal = .false.
       !
       elements: do e = 1, nfe
@@ -85,14 +88,16 @@ contains
           active_node = finite_elements(e)%connectivity(i)
           if ( lsf_field_val_cal(active_node) ) cycle element_nodes
           lsf_field_val_cal(active_node) = .true.
-          lsf_field(active_node) = test_fun(x)
+          call lsf%set_nodal_value(active_node,test_fun(x),esta,emsg)
+          if ( esta /= 0 ) return
         end do element_nodes
       end do elements
       ! Reinitalize function
-
+      call calculate_reinitalization(lsf,esta,emsg)
+      if ( esta /= 0 ) return
       ! Write field
       call write_scalar_field(step,frame_num,field_name,&
-      & field_description,lsf_field,.true.,esta,emsg)
+      & field_description,lsf%values,.true.,esta,emsg)
       if ( esta /= 0 ) return
       ! Sucess
       esta = 0
