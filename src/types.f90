@@ -20,7 +20,7 @@ module types
 #ifndef DOUBLE
   character(len=*), parameter :: es = 'es14.6e3'
 #else
-  character(len=*), parameter :: es = 'es20.15e3'
+  character(len=*), parameter :: es = 'es23.15e3'
 #endif
 !*****************************************************************************80
 #ifndef DEBUG
@@ -170,14 +170,14 @@ contains
     real(rk), intent(in) :: mtx(:,:)
     character(len=*), intent(in) :: name
     !
-    integer(ik) :: i, m
+    integer(ik) :: i
+    real(rk) :: row(size(mtx,dim=2))
     character(len=*), parameter :: wrf = '(*('//es//',:,","))'
     !
-    m = size(mtx,dim=1)
-    !
     write(unit,'(a,a)') 'Matrix: ', trim(name)
-    do i =1, m
-      write(unit,wrf) mtx(i,:)
+    do i =1, size(mtx,dim=1)
+      row = mtx(i,:)
+      write(unit,wrf) row
     end do
     !
   end subroutine write_dense_mtx_real

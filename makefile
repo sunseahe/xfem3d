@@ -62,7 +62,7 @@ ifeq ($(FC),ifort)
   # fortran
   all: FCFLAGS = $(FCFLAGSINTEL)
   all: FLFLAGS = $(FLFLAGSINTEL)
-  debug: FCFLAGS += $(FCFLAGSINTEL) -g -debug full -warn all -check all -std08 -diag-error-limit 1 -traceback -DDEBUG
+  debug: FCFLAGS += $(FCFLAGSINTEL) -g -debug full -warn all -check all -std08 -diag-error-limit 1 -traceback -DDEBUG 
   debug: FLFLAGS = $(FLFLAGSINTEL)
   opt: FCFLAGS += $(FCFLAGSINTEL) -O3
   opt: FLFLAGS = $(FLFLAGSINTEL)

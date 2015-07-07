@@ -2,7 +2,7 @@ module reinitalzation
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
   use types, only: ik, int64, rk, lk, es, debug, stdout, nl
-  use general_routines, only: size_mtx, outer, pnorm, time
+  use general_routines, only: size_mtx, outer, pnorm, time, write_dense_mtx_real
   use memory_storage, only: size_in_bytes, write_size_of_storage
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
@@ -22,7 +22,7 @@ module reinitalzation
   real(rk) :: er = 0.0e0_rk ! Diffusion related - to be calculated
   logical(lk) :: status_par = .false.
   real(rk) :: c = 1.0e-1_rk ! Diffusion coeficient
-  real(rk) :: rho = 1.0e1_rk ! Enforce Dirichlet boundary
+  real(rk) :: rho = 1.0e0_rk ! Enforce Dirichlet boundary
   real(rk) :: sign_dist_tol = 1.0e-3_rk ! Tolerance for convergence
   logical(lk) :: write_par = .false. ! Write parameters to log file
 !*****************************************************************************80
@@ -129,6 +129,7 @@ contains
     do e = 1, nfe
       if ( esta == 0 ) then
         call calc_fe_c_mtx(finite_elements(e),fe_c_mtx,esta,emsg)
+        call write_dense_mtx_real(stdout,fe_c_mtx,'C matrix')
         !$omp critical
         ! Add to sparse matrix
         associate( c => finite_elements(e)%connectivity )
@@ -273,6 +274,7 @@ contains
     !
     sdf_tol = 0.0e0_rk
     do p = 1, ngp
+      p_tmp = p
       call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
       &esta=esta,emsg=emsg)
       call sdf%get_element_nodal_values(c3d10,sdf_nv,esta,emsg)

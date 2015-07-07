@@ -55,8 +55,8 @@ module sparse
   end type sparse_linear_system_t
   ! Solution parameters
   integer(ik), parameter :: &
-  &  msglvl = 0, & ! No printing of statistical information
-  &  mtype  = 2, & ! Symmetric positive definite
+  &  msglvl = 1, & ! No printing of statistical information
+  &  mtype  = -2, & ! Symmetric positive definite
   &  maxfct = 1, &
   &  mnum   = 1
   ! Paradiso storing routines
@@ -292,7 +292,7 @@ contains
     ! Select job
     select case ( job )
 !*****************************************************************************80
-    case ( 1 ) ! Analyse and factorize
+    case ( 1 ) ! Analyze and factorize
       ! Check if job already done
       if ( self%job_completed == 0 ) then
         continue
@@ -302,6 +302,7 @@ contains
         return
       else
         call pardiso_err(-20,emsg)
+        emsg = trim(emsg) // ' - in job analyze and factorize'
         return
       end if
       ! Factorize
@@ -310,6 +311,7 @@ contains
       & one,self%iparm,msglvl,rdum,rdum,esta)
       if ( esta /= 0 ) then
         call pardiso_err(esta,emsg)
+        emsg = trim(emsg) // ' - in job analyze and factorize'
         return
       end if
       if ( present(mem_used) ) mem_used = int(self%iparm(15)*1000,&
@@ -321,10 +323,12 @@ contains
         continue
       else
         call pardiso_err(-20,emsg)
+        emsg = trim(emsg) // ' - in job solve'
         return
       end if
       if ( .not. present(x) .or. .not. present(b) ) then
         call pardiso_err(-21,emsg)
+        emsg = trim(emsg) // ' - in job solve'
         return
       end if
       ! Solve
@@ -333,6 +337,7 @@ contains
       &idum,one,self%iparm,msglvl,b,x,esta)
       if ( esta /= 0 ) then
         call pardiso_err(esta,emsg)
+        emsg = trim(emsg) // ' - in job solve'
         return
       end if
       self%job_completed = job
@@ -342,6 +347,7 @@ contains
         continue
       else
         call pardiso_err(-20,emsg)
+        emsg = trim(emsg) // ' - in job clean'
         return
       end if
       ! Clean
@@ -350,6 +356,7 @@ contains
       & idum,one,self%iparm,msglvl,rdum,rdum,esta)
       if ( esta /= 0 ) then
         call pardiso_err(esta,emsg)
+        emsg = trim(emsg) // ' - in job clean'
         return
       end if
       deallocate(self%pt,stat=esta,errmsg=emsg)
