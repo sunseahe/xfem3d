@@ -2,7 +2,8 @@ module reinitalzation
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
   use types, only: ik, int64, rk, lk, es, debug, stdout, nl
-  use general_routines, only: size_mtx, outer, pnorm, time, write_dense_mtx_real
+  use general_routines, only: size_mtx, outer, pnorm, time, &
+  &write_dense_mtx_real
   use memory_storage, only: size_in_bytes, write_size_of_storage
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
@@ -152,8 +153,8 @@ contains
     ! Allocate sparse matrix
     call c_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
-    call c_mtx%write_matrix(stdout,esta,emsg)
-    if ( esta /= 0 ) return
+    !call c_mtx%write_matrix(stdout,esta,emsg)
+    !if ( esta /= 0 ) return
     ! Factorize
     call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
     &esta=esta,emsg=emsg)

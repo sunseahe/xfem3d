@@ -246,7 +246,7 @@ module read_input
           call tokenize(read_arg(i),equal,arg_val,esta,emsg)
           if ( esta /= 0 ) return
           select case( arg_val(1) )
-            case ('number of reinitalization equations')
+            case ('number of reinitalization iterations')
               call str2i(arg_val(2),int_read,esta,emsg)
               if ( esta /= 0 ) return
               call set_reinitalization(num_reinit_in=int_read)

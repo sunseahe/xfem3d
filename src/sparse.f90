@@ -56,7 +56,7 @@ module sparse
   end type sparse_linear_system_t
   ! Solution parameters
   integer(ik), parameter :: &
-  &  msglvl = 1, & ! No printing of statistical information
+  &  msglvl = 0, & ! No printing of statistical information
   &  mtype  = 2, & ! Symmetric positive definite
   &  maxfct = 1, &
   &  mnum   = 1

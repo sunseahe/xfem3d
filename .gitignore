@@ -10,5 +10,6 @@
 *.odb
 *.inp
 *.log
+*.rec
 # Program
 xfem
