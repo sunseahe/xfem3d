@@ -129,7 +129,6 @@ contains
     do e = 1, nfe
       if ( esta == 0 ) then
         call calc_fe_c_mtx(finite_elements(e),fe_c_mtx,esta,emsg)
-        call write_dense_mtx_real(stdout,fe_c_mtx,'C matrix')
         !$omp critical
         ! Add to sparse matrix
         associate( c => finite_elements(e)%connectivity )
@@ -152,6 +151,8 @@ contains
     if ( esta /= 0 ) return
     ! Allocate sparse matrix
     call c_mtx%set(nnod,crow,ccol,cx,esta,emsg)
+    if ( esta /= 0 ) return
+    call c_mtx%write_matrix(stdout,esta,emsg)
     if ( esta /= 0 ) return
     ! Factorize
     call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&

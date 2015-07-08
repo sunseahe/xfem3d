@@ -2,7 +2,7 @@ include 'mkl_pardiso.f90'
 module sparse
 !*****************************************************************************80
   use iso_fortran_env, only: sp => real32, dp => real64, int64
-  use types, only: ik, rk, lk, cl, eps, debug
+  use types, only: ik, rk, lk, cl, eps, debug, es
   use general_routines, only: resize_vec
   use mkl_pardiso, only: mkl_pardiso_handle, pardiso
 !*****************************************************************************80
@@ -21,6 +21,7 @@ module sparse
     procedure, private :: sum_dup_rm_zero
     procedure :: get_val_from_indices
     procedure :: delete => delete_ssm
+    procedure :: write_matrix
   end type sparse_square_matrix_t
 !*****************************************************************************80
 ! Interface for matrix conversion
@@ -56,7 +57,7 @@ module sparse
   ! Solution parameters
   integer(ik), parameter :: &
   &  msglvl = 1, & ! No printing of statistical information
-  &  mtype  = -2, & ! Symmetric positive definite
+  &  mtype  = 2, & ! Symmetric positive definite
   &  maxfct = 1, &
   &  mnum   = 1
   ! Paradiso storing routines
@@ -233,6 +234,62 @@ contains
     emsg = ''
     !
   end subroutine get_val_from_indices
+!*****************************************************************************80
+! Write sparse matrix
+!*****************************************************************************80
+  subroutine write_matrix(self,write_unit,esta,emsg)
+    class(sparse_square_matrix_t), intent(in) :: self
+    integer(ik), intent(in) :: write_unit
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik) :: i
+    integer(ik) :: indx
+    !
+    if ( debug ) then
+      if ( .not. allocated(self%ai) ) then
+        esta = -1
+        emsg = 'Sparse square matrix: not allocated'
+        return
+      end if
+    end if
+    ! First write sizes
+    write(write_unit,'(i0,1x,i0)') self%n, self%nnz
+    ! Write ai
+    indx = 1
+    row1: do
+      do i = 1, 8
+        if ( indx > self%n + 1 ) exit row1
+        write(write_unit,'(i0,1x)',advance='no') self%ai(indx)
+        indx = indx + 1
+      end do
+      write(write_unit,'(a)') ''
+    end do row1
+    write(write_unit,'(a)') ''
+    ! Write aj
+    indx = 1
+    row2: do
+      do i = 1, 8
+        if ( indx > self%nnz ) exit row2
+        write(write_unit,'(i0,1x)',advance='no') self%aj(indx)
+        indx = indx + 1
+      end do
+      write(write_unit,'(a)') ''
+    end do row2
+    write(write_unit,'(a)') ''
+    ! Write ax
+    indx = 1
+    row3: do
+      do i = 1, 8
+        if ( indx > self%nnz ) exit row3
+        write(write_unit,'('//es//',1x)',advance='no') self%ax(indx)
+        indx = indx + 1
+      end do
+      write(write_unit,'(a)') ''
+    end do row3
+    write(write_unit,'(a)') ''
+    !
+  end subroutine write_matrix
 !*****************************************************************************80
 ! Delete routine
 !*****************************************************************************80

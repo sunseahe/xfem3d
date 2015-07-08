@@ -9,16 +9,15 @@ module fe_c3d10
   private
 !*****************************************************************************80
   integer(ik), parameter :: nelnod = 10
-  integer(ik), parameter :: ngp = 5
-  real(rk), parameter :: oh = 1.0_rk / 2.0_rk, oq = 1.0_rk / 4.0_rk, &
-  & os = 1.0_rk / 6.0_rk, tf = 3.0_rk / 4.0e1_rk
+  integer(ik), parameter :: ngp = 4
+  real(rk), parameter :: a = 0.58541020_rk, b = 0.13819660, &
+  &c = 1.0_rk / 2.4e1_rk
   real(rk), parameter :: gp(ngp,dom) = reshape([ &
-  & oq, oq, oq, &
-  & os, os, os, &
-  & os, os, oh, &
-  & os, oh, os, &
-  & oh, os, os ], order=[2,1], shape=[ngp,dom])
-  real(rk), parameter :: w(ngp) = [ - 2.0_rk / 1.5e1_rk, tf, tf, tf, tf ]
+  & a, b, b, &
+  & b, a, b, &
+  & b, b, a, &
+  & b, b, b  ], order=[2,1], shape=[ngp,dom])
+  real(rk), parameter :: w(ngp) = [ c, c, c, c ]
 !*****************************************************************************80
   type :: c3d10_t
     type(point_3d_t) :: nodes(nelnod)
