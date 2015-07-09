@@ -165,7 +165,7 @@ contains
 !*****************************************************************************80
 ! R vector fe
 !*****************************************************************************80
-  subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
+  pure subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: r_vec(:)
     integer(ik), intent(out) :: esta
@@ -324,7 +324,7 @@ contains
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: i, j
+    integer(ik) :: i
     integer(ik) :: conv_iter
     real(rk) :: sd_tol_previous, sd_tol_current, rel_tol
     logical(lk) :: converged
@@ -369,23 +369,11 @@ contains
     converged = .false.
     conv_iter = 0
     do i = 1, num_reinit
-      call r_vec_setup(esta,emsg)
-      if ( esta /= 0 ) return
-      !call r_vec%write_field(stdout,esta,emsg)
-      !stop
-      ! Backsubstitutions
-      print*, '-rvec----'
-      do j = 1,10
-        print*,  r_vec%values(j)
-      end do
-sdf%values=0
+      call r_vec_setup(esta,emsg); if ( esta /= 0 ) return
+      ! Backsubstitution
       call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=sdf%values&
       &,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
-      print*, '---sdf----'
-      do j = 1,20
-        print*,  sdf%values(j)
-      end do
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
       if ( esta /= 0 ) return
@@ -408,14 +396,18 @@ sdf%values=0
       & '**Warning: solution relative tolerance (', rel_tol, &
       & ' ) after ', num_reinit , ' iterations, ', nl, 'is larger than &
       & specified (', sign_dist_tol ,' ).'
+      write(stdout,'(a,'//es//',a)') 'Acheved a value of ', sd_tol_current, &
+      ' for signed distance norm approximation.'
     else
       write(stdout,'(a,'//es//',a,a,a,'//es//',a,i0,a)') &
-      & 'Acheved a value of ', sd_tol_current,' for signed distance &
+      & 'Acheved a value of ', sd_tol_current,' for signed distance norm &
       &approximation and', nl, 'relative tolerance of ', rel_tol, ' in ', i, &
       & ' iterations.'
     end if
-    write(stdout,'(a,'//es//',a)') 'Solution complete, elapsed &
-    &time', t%elapsed_time(), ' s.'
+    write(stdout,'(a)') 'Solution finished'
+    call t%write_elapsed_time(stdout)
+    ! Copy
+    call sdf_inout%copy(sdf,esta,emsg); if ( esta /= 0 ) return
     ! Clean
     call linear_system%solve(job=3,a=c_mtx,esta=esta,emsg=emsg)
     if ( esta /= 0 ) return

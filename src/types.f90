@@ -61,6 +61,7 @@ module general_routines
       procedure :: elapsed_time => elapsed_time_fnk
       procedure, nopass, private :: ctime_fnk
       procedure, nopass :: print_time => print_time_fnk
+      procedure :: write_elapsed_time
   end type time
 !*****************************************************************************80
   interface resize_vec
@@ -308,7 +309,7 @@ contains
   end subroutine start_timer_sub
 !
   function elapsed_time_fnk(self) result(elapsed_time)
-    class(time), intent(inout) :: self
+    class(time), intent(in) :: self
     real(rk) :: elapsed_time
     elapsed_time = self%ctime_fnk() - self%saved_time
   end function elapsed_time_fnk
@@ -327,6 +328,14 @@ contains
     write(print_time,'(i2.2,a,i2.2,a,i2.2)') datetime(5), ':',&
     & datetime(6), ':', datetime(7)
   end function print_time_fnk
+!
+  subroutine write_elapsed_time(self,write_unit)
+    class(time), intent(in) :: self
+    integer(ik), intent(in) :: write_unit
+    real(rk) :: elapsed_time
+    elapsed_time = self%ctime_fnk() - self%saved_time
+    write(write_unit,'(a,es9.1e3,a)') 'Elapsed time', elapsed_time, ' s.'
+  end subroutine write_elapsed_time
 !*****************************************************************************80
 end module general_routines
 

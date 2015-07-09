@@ -50,7 +50,6 @@ module sparse
     logical(lk) :: configured = .false.
     integer(ik) :: iparm(64) = 0
     type(mkl_pardiso_handle), pointer :: pt(:) => null()
-    integer(ik) :: job_completed = 0
   contains
     procedure :: solve => solve_sls
   end type sparse_linear_system_t
@@ -350,18 +349,6 @@ contains
     select case ( job )
 !*****************************************************************************80
     case ( 1 ) ! Analyze and factorize
-      ! Check if job already done
-      if ( self%job_completed == 0 ) then
-        continue
-      else if ( self%job_completed == 1 ) then
-        esta = 0
-        emsg = ''
-        return
-      else
-        call pardiso_err(-20,emsg)
-        emsg = trim(emsg) // ' - in job analyze and factorize'
-        return
-      end if
       ! Factorize
       phase = 12
       call pardiso(self%pt,maxfct,mnum,mtype,phase,a%n,a%ax,a%ai,a%aj,idum, &
@@ -373,18 +360,10 @@ contains
       end if
       if ( present(mem_used) ) mem_used = int(self%iparm(15)*1000,&
       & kind=int64)
-      self%job_completed = job
 !*****************************************************************************80
     case ( 2 ) ! Solve
-      if ( self%job_completed == 1 ) then
-        continue
-      else
-        call pardiso_err(-20,emsg)
-        emsg = trim(emsg) // ' - in job solve'
-        return
-      end if
       if ( .not. present(x) .or. .not. present(b) ) then
-        call pardiso_err(-21,emsg)
+        call pardiso_err(-20,emsg)
         emsg = trim(emsg) // ' - in job solve'
         return
       end if
@@ -397,17 +376,8 @@ contains
         emsg = trim(emsg) // ' - in job solve'
         return
       end if
-      self%job_completed = job
 !*****************************************************************************80
     case ( 3 ) ! Clean
-      if ( self%job_completed == 1 .or. self%job_completed == 2 ) then
-        continue
-      else
-        call pardiso_err(-20,emsg)
-        emsg = trim(emsg) // ' - in job clean'
-        return
-      end if
-      ! Clean
       phase = -1
       CALL pardiso(self%pt,maxfct,mnum,mtype,phase,one,rdum,idum,idum, &
       & idum,one,self%iparm,msglvl,rdum,rdum,esta)
@@ -416,9 +386,7 @@ contains
         emsg = trim(emsg) // ' - in job clean'
         return
       end if
-      deallocate(self%pt,stat=esta,errmsg=emsg)
-      if ( esta /= 0 ) return
-      self%job_completed = 0
+      deallocate(self%pt,stat=esta,errmsg=emsg); if ( esta /= 0 ) return
       self%configured = .false.
     case default
       esta = -1
@@ -463,8 +431,6 @@ contains
     case ( -11 )
       adit_emsg = 'Read/write problems with the OOC data file'
     case ( -20 )
-      adit_emsg = 'Job not possible'
-    case ( -21 )
       adit_emsg = 'Rhs vector or solution vector not present'
     case default
       adit_emsg = 'Unknown error'
