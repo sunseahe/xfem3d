@@ -28,7 +28,7 @@ module reinitalzation
   logical(lk) :: write_par = .false. ! Write parameters to log file
 !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
-  type(scalar_field_t), pointer :: sdf => null()
+  type(scalar_field_t), save :: sdf
   type(scalar_field_t), save :: r_vec
 !*****************************************************************************80
   type(sparse_square_matrix_t), save :: c_mtx
@@ -165,7 +165,7 @@ contains
 !*****************************************************************************80
 ! R vector fe
 !*****************************************************************************80
-subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
+  subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: r_vec(:)
     integer(ik), intent(out) :: esta
@@ -329,7 +329,6 @@ subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
     real(rk) :: sd_tol_previous, sd_tol_current, rel_tol
     logical(lk) :: converged
     type(time) :: t
-    real(rk) :: tmp(nnod)
     ! Check
     if ( .not. configured ) then
       esta = -1
@@ -337,9 +336,8 @@ subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
       return
     end if
     ! Copy scalar fields
-    call sdf_0%copy(sdf_inout,esta,emsg)
-    if ( esta /= 0 ) return
-    sdf => sdf_inout
+    call sdf%copy(sdf_inout,esta,emsg); if ( esta /= 0 ) return
+    call sdf_0%copy(sdf_inout,esta,emsg); if ( esta /= 0 ) return
     ! Setup parameters
     if ( .not. status_par ) then
       d_t = alpha * char_fe_dim
@@ -375,16 +373,19 @@ subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
       if ( esta /= 0 ) return
       !call r_vec%write_field(stdout,esta,emsg)
       !stop
-      ! Backsubstitution
-      tmp = sdf%values
-      call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=tmp&
+      ! Backsubstitutions
+      print*, '-rvec----'
+      do j = 1,10
+        print*,  r_vec%values(j)
+      end do
+sdf%values=0
+      call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=sdf%values&
       &,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
-      do j = 1,30
-        print*, sdf%values(i) - tmp(i)
+      print*, '---sdf----'
+      do j = 1,20
+        print*,  sdf%values(j)
       end do
-      print*, '-----------'
-      sdf%values = tmp
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
       if ( esta /= 0 ) return
@@ -418,13 +419,10 @@ subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
     ! Clean
     call linear_system%solve(job=3,a=c_mtx,esta=esta,emsg=emsg)
     if ( esta /= 0 ) return
-    call c_mtx%delete(esta,emsg)
-    if ( esta /= 0 ) return
-    sdf => null()
-    call r_vec%delete(esta,emsg)
-    if ( esta /= 0 ) return
-    call sdf_0%delete(esta,emsg)
-    if ( esta /= 0 ) return
+    call c_mtx%delete(esta,emsg); if ( esta /= 0 ) return
+    call r_vec%delete(esta,emsg); if ( esta /= 0 ) return
+    call sdf%delete(esta,emsg); if ( esta /= 0 ) return
+    call sdf_0%delete(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
