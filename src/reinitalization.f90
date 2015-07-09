@@ -153,8 +153,6 @@ contains
     ! Allocate sparse matrix
     call c_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
-    !call c_mtx%write_matrix(stdout,esta,emsg)
-    !if ( esta /= 0 ) return
     ! Factorize
     call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
     &esta=esta,emsg=emsg)
@@ -167,7 +165,7 @@ contains
 !*****************************************************************************80
 ! R vector fe
 !*****************************************************************************80
-  pure subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
+subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: r_vec(:)
     integer(ik), intent(out) :: esta
@@ -201,9 +199,11 @@ contains
       call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
       &inv_jac_mtx=inv_jac_mtx,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
-      !
       call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv,esta,emsg)
+      if ( esta /= 0 ) return
       call sdf%get_element_nodal_values(c3d10,sdf_nv,esta,emsg)
+      if ( esta /= 0 ) return
+      !
       sdf_0_gp = dot(n,sdf_0_nv)
       sdf_gp = dot(n,sdf_nv)
       call gemv(b,sdf_nv,grad_sdf)
@@ -324,11 +324,12 @@ contains
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: i
+    integer(ik) :: i, j
     integer(ik) :: conv_iter
     real(rk) :: sd_tol_previous, sd_tol_current, rel_tol
     logical(lk) :: converged
     type(time) :: t
+    real(rk) :: tmp(nnod)
     ! Check
     if ( .not. configured ) then
       esta = -1
@@ -372,13 +373,22 @@ contains
     do i = 1, num_reinit
       call r_vec_setup(esta,emsg)
       if ( esta /= 0 ) return
+      !call r_vec%write_field(stdout,esta,emsg)
+      !stop
       ! Backsubstitution
-      call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=sdf%values&
+      tmp = sdf%values
+      call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=tmp&
       &,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
+      do j = 1,30
+        print*, sdf%values(i) - tmp(i)
+      end do
+      print*, '-----------'
+      sdf%values = tmp
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
       if ( esta /= 0 ) return
+      print*, sd_tol_current
       rel_tol = abs(sd_tol_current-sd_tol_previous) / sd_tol_current
       if( rel_tol <= sign_dist_tol ) then
         conv_iter = conv_iter + 1
@@ -411,6 +421,10 @@ contains
     call c_mtx%delete(esta,emsg)
     if ( esta /= 0 ) return
     sdf => null()
+    call r_vec%delete(esta,emsg)
+    if ( esta /= 0 ) return
+    call sdf_0%delete(esta,emsg)
+    if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''

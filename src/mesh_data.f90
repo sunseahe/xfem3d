@@ -101,7 +101,7 @@ module mesh_data
         le = le + usf(i,a) * usf(i,a)
       end do
     end do
-    le = vol_fe / sqrt(le)
+    le = vol_fe**(1.0_rk/3.0_rk) !/ sqrt(le)
     ! Sucess
     esta = 0
     emsg = ''
@@ -127,7 +127,7 @@ module mesh_data
     end do
     !$omp end parallel do
     if ( esta /= 0 ) return
-    char_fe_dim = minval(le_all)
+    char_fe_dim = sum(le_all) / nfe
     avg_fe_vol = sum(vol_all) / nfe
     ! Sucess
     esta = 0

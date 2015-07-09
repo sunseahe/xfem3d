@@ -135,6 +135,7 @@ contains
         cpus = available_cpus
       end if
     end if
+    write(stdout,'(a,i0,a)') 'Using ', cpus, ' processors for solution.'
     call omp_set_num_threads(cpus)
     ! Sucess
     esta = 0

@@ -1,5 +1,5 @@
 module scalar_field
-  use types, only: ik, rk, lk, cl, debug
+  use types, only: ik, rk, lk, cl, debug, es
   use mesh_data, only : nnod
   use fe_c3d10, only: nelnod, c3d10_t
 !*****************************************************************************80
@@ -13,6 +13,8 @@ module scalar_field
     procedure :: get_element_nodal_values
     procedure :: copy
     procedure :: assemble_element_nodal_values
+    procedure :: delete
+    procedure :: write_field
   end type  scalar_field_t
 !*****************************************************************************80
   public :: scalar_field_t
@@ -150,5 +152,50 @@ module scalar_field
     esta = 0
     emsg = ''
   end subroutine assemble_element_nodal_values
+!*****************************************************************************80
+  pure subroutine delete(self,esta,emsg)
+    class(scalar_field_t), intent(inout) :: self
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    if ( debug ) then
+      if ( .not.allocated (self%values) ) then
+        esta = -1
+        emsg ='Delete scalar field: field values not allocated'
+        return
+      end if
+    end if
+    deallocate(self%values,stat=esta,errmsg=emsg)
+    if ( esta /= 0 ) return
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine delete
+!*****************************************************************************80
+  subroutine write_field(self,write_unit,esta,emsg)
+    class(scalar_field_t), intent(in) :: self
+    integer(ik), intent(in) :: write_unit
+    integer(ik), intent(out) :: esta
+    character(len=cl), intent(out) :: emsg
+    !
+    integer(ik) :: i
+    !
+    if ( debug ) then
+      if ( .not.allocated (self%values) ) then
+        esta = -1
+        emsg ='Write scalar field: field values not allocated'
+        return
+      end if
+    end if
+    !
+    do i = 1, size(self%values)
+      write(write_unit,'(i0,1x,'//es//')') i, self%values(i)
+    end do
+    ! Sucess
+    esta = 0
+    emsg = ''
+    !
+  end subroutine write_field
 !*****************************************************************************80
 end module scalar_field
