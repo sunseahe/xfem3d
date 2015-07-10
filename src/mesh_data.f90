@@ -101,7 +101,7 @@ module mesh_data
         le = le + usf(i,a) * usf(i,a)
       end do
     end do
-    le = vol_fe**(1.0_rk/3.0_rk) !/ sqrt(le)
+    le = 1.0_rk / sqrt(le)
     ! Sucess
     esta = 0
     emsg = ''
