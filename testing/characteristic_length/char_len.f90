@@ -238,7 +238,7 @@ program main
 !*****************************************************************************80
   h = 0.5
   coordinates = [ point_2d_t([0.,0.]), point_2d_t([h,0.]),  &
-  &point_2d_t([h,h]), point_2d_t([0.,h]) ]
+  &point_2d_t([h+1,h+1]), point_2d_t([0.,h]) ]
   connectivity = [ 1,2,3,4 ]
   element = cp2d4_t(coordinates,connectivity)
 !*****************************************************************************80
