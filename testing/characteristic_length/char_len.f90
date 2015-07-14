@@ -191,7 +191,7 @@ contains
     if ( present(det_jac) ) det_jac = det_jac_int
     ! Jacobian inverse
     associate( j => jac_mtx_int )
-    inv_jac_mtx_int = ( 1.0_rk / det_jac ) * reshape( &
+    inv_jac_mtx_int = ( 1.0_rk / det_jac_int ) * reshape( &
     & [ j(2,2), -j(1,2),         &
     &  -j(2,1),  j(1,1) ],       &
     & shape = [2,2], order = [2,1] )
@@ -207,7 +207,7 @@ contains
 end module cp2d4
 !*****************************************************************************80
 program main
-  use blas95, only: gemm
+  use blas95, only: gemm, dot
   use types, only: ik, rk, cl
   use point, only: dom, point_2d_t
   use cp2d4, only: cp2d4_t, ngp, nelnod
@@ -237,8 +237,8 @@ program main
   real :: res(nelnod)
 !*****************************************************************************80
   h = 0.5
-  coordinates = [ point_2d_t([0.,0.]), point_2d_t([h,0.]),  &
-  &point_2d_t([h+1,h+1]), point_2d_t([0.,h]) ]
+  coordinates = [ point_2d_t([0.,0.]), point_2d_t([0.5,0.]),  &
+  &point_2d_t([0.5,1.0]), point_2d_t([0.,1.0]) ]
   connectivity = [ 1,2,3,4 ]
   element = cp2d4_t(coordinates,connectivity)
 !*****************************************************************************80
@@ -255,11 +255,14 @@ program main
     l_mtx_int = l_mtx_int + rtmp1 * det_jac
   end do
   print*, 'vol=',vol
-!  print*, '--b mtx avg--'
-!  b_mtx_int = 1.0_rk / vol * b_mtx_int
-!  do i = 1, dom
-!    print*, (b_mtx_int(i,j),j=1,nelnod)
-!  end do
+  print*, '--b mtx avg--'
+  b_mtx_int = 1.0_rk / vol * b_mtx_int
+  !call element%gradient(xi_coo_pnt=point_2d_t([0.0,0.0]),b_mtx=b_mtx,&
+  !&esta=esta,emsg=emsg)
+  do i = 1, dom
+    print*, (b_mtx_int(i,j),j=1,nelnod)
+  end do
+  print*, 'Characheristic element dimension = ', vol / l_max_analy
 !  l_max_analy = 0.0_rk
 !  do i = 1, dom
 !    do j=1,nelnod
@@ -269,38 +272,38 @@ program main
 !  l_max_analy = sqrt(l_max_analy)
 !  print*, 'Maximal eigenvalue analyitcal upper bound = ', l_max_analy
 !  print*, 'Characheristic element dimension = ', vol / l_max_analy
-  print*, '--l mtx avg--'
-  l_mtx_int = 1.0_rk / vol * l_mtx_int
-  do i = 1, nelnod
-    print*, (l_mtx_int(i,j),j=1,nelnod)
-  end do
-  l_max_analy = 0.0_rk
-  do i = 1, nelnod
-    do j=1,nelnod
-      l_max_analy = l_max_analy + l_mtx_int(i,j) * l_mtx_int(i,j)
-    end do
-  end do
-  l_max_analy = sqrt(l_max_analy)
-  print*, 'Maximal eigenvalue analyitcal upper bound = ', l_max_analy
-  print*, 'Characheristic element dimension = ', 1.0 / l_max_analy
+!  print*, '--l mtx avg--'
+!  l_mtx_int = 1.0_rk / vol * l_mtx_int
+!  do i = 1, nelnod
+!    print*, (l_mtx_int(i,j),j=1,nelnod)
+!  end do
+!  l_max_analy = 0.0_rk
+!  do i = 1, nelnod
+!    do j=1,nelnod
+!      l_max_analy = l_max_analy + l_mtx_int(i,j) * l_mtx_int(i,j)
+!    end do
+!  end do
+!  l_max_analy = sqrt(l_max_analy)
+!  print*, 'Maximal eigenvalue analyitcal upper bound = ', l_max_analy
+!  print*, 'Characheristic element dimension = ', 1.0 / l_max_analy
 !*****************************************************************************80
 ! Initialize
-  call feastinit(fpm)
-  fpm(1)=1
-  Emin=tiny(0.0)
-  Emax=10.0
-  M0 = 4
-  M = 4
+!  call feastinit(fpm)
+!  fpm(1)=1
+!  Emin=tiny(0.0)
+!  Emax=10.0
+!  M0 = 4
+!  M = 4
 !*****************************************************************************80
-  call sfeast_syev(UPLO,nelnod,l_mtx_int,nelnod,fpm,epsout,loop, &
-  & Emin,Emax,M0,E,X,M,res,info)
-  print  *,' FEAST OUTPUT INFO ',info
-  if(info.ne.0) stop 1
-  print*, 'Eigenvalues of l mtx:'
-  do i = 1, nelnod
-    print*, e(i)
-  end do
-  print*, 'Characheristic element dimension = ', 1.0 /  maxval(e)
+!  call sfeast_syev(UPLO,nelnod,l_mtx_int,nelnod,fpm,epsout,loop, &
+!  & Emin,Emax,M0,E,X,M,res,info)
+!  print  *,' FEAST OUTPUT INFO ',info
+!  if(info.ne.0) stop 1
+!  print*, 'Eigenvalues of l mtx:'
+!  do i = 1, nelnod
+!    print*, e(i)
+!  end do
+!  print*, 'Characheristic element dimension = ', 1.0 /  maxval(e)
 !*****************************************************************************80
 end program main
 
