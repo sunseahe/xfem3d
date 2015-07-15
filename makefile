@@ -19,7 +19,7 @@ FLFLAGSINTEL = -L$(MKLROOT)/lib/intel64 -L$(IROOT)/lib/intel64 -lmkl_blas95_lp64
 CCFLAGSINTEL = -I$(ABQROOT)/code/include -cxxlib -w -Wno-deprecated -fpermissive -DTYPENAME=typename -D_LINUX_SOURCE -DABQ_LINUX -DABQ_LNX86_64
 CLFLAGSINTEL = -cxxlib -Wl,-Bdynamic -L$(ABQROOT)/code/bin -lstandardB -lABQSMAOdbDdbOdb -lABQSMAOdbApi -lABQSMAOdbCore -lABQSMAOdbCoreGeom -lABQSMAOdbAttrEO -lABQSMAAbuBasicUtils -lABQSMABasShared -lABQSMABasCoreUtils -lABQSMAStiCAE_StableTime -lABQSMABasMem -lABQSMAAbuGeom -lABQSMARomDiagEx -lABQSMASspUmaCore -lABQSMASimInterface -lABQSMAMtxCoreModule
 #GCC flags fortran
-FCFLAGSGCC = -fintrinsic-modules-path $(obj_path) -J$(obj_path) -I$(F95ROOT)/include/intel64/lp64 -I$(MKLROOT)/include -cpp -fopenmp
+FCFLAGSGCC = -fintrinsic-modules-path $(obj_path) -J$(obj_path) -I$(F95ROOT)/include/intel64/lp64 -I$(MKLROOT)/include -cpp -fopenmp -fcray-pointer
 FLFLAGSGCC = -L$(MKLROOT)/lib/intel64 $(F95ROOT)/lib/intel64/libmkl_blas95_lp64.a $(F95ROOT)/lib/intel64/libmkl_lapack95_lp64.a -lmkl_gf_lp64 -lmkl_core -lmkl_intel_thread -lgomp
 #GCC flags c++
 CCFLAGSGCC = -I$(ABQROOT)/code/include -lstdc++ -w -Wno-deprecated -fpermissive -DTYPENAME=typename -D_LINUX_SOURCE -DABQ_LINUX -DABQ_LNX86_64

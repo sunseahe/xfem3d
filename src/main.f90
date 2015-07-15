@@ -1,5 +1,7 @@
+include 'mkl_service.f90'
 program xfem_tetra_test
   use omp_lib, only: omp_get_num_procs, omp_set_num_threads
+  USE mkl_service, ONLY: mkl_set_num_threads
   use types, only: ik, lk, cl, stdout, stderr, debug
   use general_routines, only: print_error, to_lower, str2i
   use read_input, only: read_data, input_file_name, inp_file
@@ -38,7 +40,7 @@ program xfem_tetra_test
   call read_data(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
   write(stdout,'(a)') 'Read data complete.'
-  if ( debug ) call mesh_data_statistics()
+  call mesh_data_statistics()
 !*****************************************************************************80
 ! Calculate volume
 !*****************************************************************************80
@@ -136,7 +138,8 @@ contains
       end if
     end if
     write(stdout,'(a,i0,a)') 'Using ', cpus, ' processors for solution.'
-    call omp_set_num_threads(cpus)
+    call omp_set_num_threads(cpus) ! Omp set
+    call mkl_set_num_threads(cpus) ! Mkl setup processors
     ! Sucess
     esta = 0
     emsg = ''

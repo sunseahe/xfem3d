@@ -132,19 +132,20 @@ contains
         call calc_fe_c_mtx(finite_elements(e),fe_c_mtx,esta,emsg)
         !$omp critical
         ! Add to sparse matrix
-        associate( c => finite_elements(e)%connectivity )
+        !associate( c => finite_elements(e)%connectivity )
         do i = 1, nelnod
           do j = 1, nelnod
             ! symmetric matrix only upper part
-            if ( c(i) <= c(j) ) then
-              crow(indx) = c(i)
-              ccol(indx) = c(j)
+            if ( finite_elements(e)%connectivity(i) <= &
+            & finite_elements(e)%connectivity(j) ) then
+              crow(indx) = finite_elements(e)%connectivity(i)
+              ccol(indx) = finite_elements(e)%connectivity(j)
               cx(indx) = fe_c_mtx(i,j)
               indx = indx + 1
             end if
           end do
         end do
-        end associate
+        !end associate
         !$omp end critical
       end if
     end do
@@ -377,7 +378,7 @@ contains
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
       if ( esta /= 0 ) return
-      print*, sd_tol_current
+      print*, i, ',' ,sd_tol_current
       rel_tol = abs(sd_tol_current-sd_tol_previous) / sd_tol_current
       if( rel_tol <= sign_dist_tol ) then
         conv_iter = conv_iter + 1

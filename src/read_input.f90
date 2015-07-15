@@ -1,7 +1,7 @@
 module read_input
 !*****************************************************************************80
   use types, only: ik, rk, lk, cl, stdout
-  use general_routines, only: str2i, str2r, to_lower, strip_char
+  use general_routines, only: str2i, str2r, to_lower, strip_char, time
   use tokenize_string, only: tokenize, comma, equal
   use point, only: dom, zero_pnt, point_3d_t
   use fe_c3d10, only: nelnod, c3d10_t
@@ -169,9 +169,14 @@ module read_input
     character(len=cl), allocatable :: read_arg(:)
     type(c3d10_t), allocatable :: finite_elements(:)
     !
+    type(time) :: t
+    !
     write(stdout,'(a)') 'Reading connectivity ...'
     allocate(finite_elements(0),stat=esta,errmsg=emsg)
     if ( esta /= 0 ) return
+    !
+    call t%start_timer()
+    !
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -195,10 +200,14 @@ module read_input
         call str2i(read_arg(i),el_conn(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      finite_elements = [ finite_elements, c3d10_t(nodes=zero_pnt,&
-      &connectivity=el_conn) ]
+      !finite_elements = [ finite_elements, c3d10_t(nodes=zero_pnt,&
+      !&connectivity=el_conn) ]
       if ( esta /= 0 ) return
     end do ra
+    !
+    call t%write_elapsed_time(stdout)
+    stop
+    !
     ! Create element array
     call set_finite_elements(finite_elements,esta,emsg)
     if ( esta /= 0 ) return
