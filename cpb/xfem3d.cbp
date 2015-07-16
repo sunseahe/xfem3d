@@ -31,6 +31,8 @@
 		<Unit filename="../src/determinant.f90" />
 		<Unit filename="../src/fe_c3d10.f90" />
 		<Unit filename="../src/fe_c3d4.f90" />
+		<Unit filename="../src/hamilton_jacobi.f90" />
+		<Unit filename="../src/linked_list.f90" />
 		<Unit filename="../src/lsf_test_functions.f90" />
 		<Unit filename="../src/main.f90" />
 		<Unit filename="../src/mesh_data.f90" />

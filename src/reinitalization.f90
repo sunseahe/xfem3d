@@ -37,7 +37,7 @@ module reinitalzation
   integer(int64) :: mem_fac_c_mtx = 0
 !*****************************************************************************80
   public :: set_reinitalization, configured, calculate_reinitalization, &
-  & reinitalization_statistics
+  & reinitalization_statistics, reg_pnorm
 !*****************************************************************************80
 contains
 !*****************************************************************************80
