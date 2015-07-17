@@ -51,7 +51,7 @@ module sparse
     integer(ik) :: iparm(64) = 0
     type(mkl_pardiso_handle), pointer :: pt(:) => null()
   contains
-    procedure :: solve => solve_sls
+    procedure :: solve_direct => solve_direct_sls
   end type sparse_linear_system_t
   ! Solution parameters
   integer(ik), parameter :: &
@@ -62,7 +62,7 @@ module sparse
   ! Paradiso storing routines
   integer(ik), parameter :: phs = 1, phr = 2, phd = 3
 !*****************************************************************************80
-  public :: sparse_square_matrix_t, sparse_linear_system_t
+  public :: sparse_square_matrix_t, sparse_direct_linear_system_t
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -305,7 +305,7 @@ contains
 !*****************************************************************************80
 ! Solve routine
 !*****************************************************************************80
-  subroutine solve_sls(self,job,a,b,x,mem_used,esta,emsg)
+  subroutine solve_direct_sls(self,job,a,b,x,mem_used,esta,emsg)
     class(sparse_linear_system_t), intent(inout) :: self
     integer(ik), intent(in) :: job
     type(sparse_square_matrix_t), intent(inout) :: a
@@ -335,7 +335,7 @@ contains
       self%iparm(10) = 13 ! perturbe the pivot elements with 1E-13
       self%iparm(11) = 1 ! use nonsymmetric permutation and scaling MPS
       self%iparm(27) = 1 ! check input values
-#ifndef DOUBLE
+#ifndef _DOUBLE
       self%iparm(28) = 1 ! Single precision
 #else
       self%iparm(28) = 0 ! Double precision
@@ -396,7 +396,7 @@ contains
     esta = 0
     emsg = ''
     !
-  end subroutine solve_sls
+  end subroutine solve_direct_sls
 !*****************************************************************************80
 ! Error handling
 !*****************************************************************************80

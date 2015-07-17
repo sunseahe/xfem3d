@@ -3,7 +3,7 @@ module types
   & int8, &
   & ik => int32, &
   & int64, &
-#ifndef DOUBLE
+#ifndef _DOUBLE
   & rk => real32, &
 #else
   & rk => real64, &
@@ -17,13 +17,13 @@ module types
   integer(ik), parameter :: cl = 256, lk = 4
   real(rk), parameter :: eps = epsilon(1.0_rk)
 !*****************************************************************************80
-#ifndef DOUBLE
+#ifndef _DOUBLE
   character(len=*), parameter :: es = 'es14.6e3'
 #else
   character(len=*), parameter :: es = 'es23.15e3'
 #endif
 !*****************************************************************************80
-#ifndef DEBUG
+#ifndef _DEBUG
   logical(lk), parameter :: debug = .false.
 #else
   logical(lk), parameter :: debug = .true.
@@ -329,12 +329,20 @@ contains
     & datetime(6), ':', datetime(7)
   end function print_time_fnk
 !
-  subroutine write_elapsed_time(self,write_unit)
+  subroutine write_elapsed_time(self,write_unit,specific)
     class(time), intent(in) :: self
     integer(ik), intent(in) :: write_unit
+    character(len=*), optional, intent(in) :: specific
+    !
     real(rk) :: elapsed_time
+    !
     elapsed_time = self%ctime_fnk() - self%saved_time
-    write(write_unit,'(a,es9.1e3,a)') 'Elapsed time', elapsed_time, ' s.'
+    if ( present(specific) ) then
+      write(write_unit,'(a,es9.1e3,a)') specific, elapsed_time, ' s.'
+    else
+      write(write_unit,'(a,es9.1e3,a)') 'Elapsed time', elapsed_time, ' s.'
+    end if
+    !
   end subroutine write_elapsed_time
 !*****************************************************************************80
 end module general_routines

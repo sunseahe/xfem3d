@@ -26,7 +26,9 @@ module reinitalzation
   real(rk) :: rho = 1.0e0_rk ! Enforce Dirichlet boundary
   real(rk) :: sign_dist_tol = 1.0e-3_rk ! Tolerance for convergence
   logical(lk) :: write_par = .false. ! Write parameters to log file
-!*****************************************************************************80
+  logical(lk) :: write_iter_t = .false. ! Reinitalization iteration time
+  ! written
+ !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
   type(scalar_field_t), save :: sdf
   type(scalar_field_t), save :: r_vec
@@ -329,7 +331,7 @@ contains
     integer(ik) :: conv_iter
     real(rk) :: sd_tol_previous, sd_tol_current, rel_tol
     logical(lk) :: converged
-    type(time) :: t
+    type(time) :: t_complete, t_iter
     ! Check
     if ( .not. configured ) then
       esta = -1
@@ -358,7 +360,7 @@ contains
     end if
     ! Solve
     write(stdout,'(a)') 'Solving reinitalization equation ...'
-    call t%start_timer()
+    call t_complete%start_timer()
     ! Calculate c matrix
     call c_mtx_setup(esta,emsg)
     if ( esta /= 0 ) return
@@ -370,6 +372,7 @@ contains
     converged = .false.
     conv_iter = 0
     do i = 1, num_reinit
+      if ( i == 1 .and. .not. write_iter_t ) call t_iter%start_timer()
       call r_vec_setup(esta,emsg); if ( esta /= 0 ) return
       ! Backsubstitution
       call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=sdf%values&
@@ -378,7 +381,6 @@ contains
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
       if ( esta /= 0 ) return
-      print*, i, ',' ,sd_tol_current
       rel_tol = abs(sd_tol_current-sd_tol_previous) / sd_tol_current
       if( rel_tol <= sign_dist_tol ) then
         conv_iter = conv_iter + 1
@@ -390,6 +392,11 @@ contains
         conv_iter = 0
       end if
       sd_tol_previous = sd_tol_current
+      if ( i == 1 .and. .not. write_iter_t ) then
+        call t_complete%write_elapsed_time(stdout,'One reinitalzation &
+        &iteration time')
+        write_iter_t = .true.
+      end if
     end do
     ! Write status
     if ( .not. converged ) then
@@ -405,8 +412,8 @@ contains
       &approximation and', nl, 'relative tolerance of ', rel_tol, ' in ', i, &
       & ' iterations.'
     end if
-    write(stdout,'(a)') 'Solution finished'
-    call t%write_elapsed_time(stdout)
+    call t_complete%write_elapsed_time(stdout,'Reinitalization finished, &
+    &elapsed time')
     ! Copy
     call sdf_inout%copy(sdf,esta,emsg); if ( esta /= 0 ) return
     ! Clean

@@ -9,7 +9,8 @@ module volume_integral
   use write_odb, only: start_odb_api, finish_odb_api, write_model_data,  &
   & create_step, create_frame, write_scalar_field, close_odb_file
   use read_input, only: input_file_name
-  use reinitalzation, only: calculate_reinitalization, r_conf => configured
+  use reinitalzation, only: calculate_reinitalization, r_conf => configured, &
+  & reinitalization_statistics
 !*****************************************************************************80
   implicit none
   private
@@ -96,6 +97,7 @@ contains
       if ( r_conf ) then
         call calculate_reinitalization(lsf,esta,emsg)
         if ( esta /= 0 ) return
+        call reinitalization_statistics()
       end if
       ! Write field
       call write_scalar_field(step,frame_num,field_name,&

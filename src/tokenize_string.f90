@@ -1,5 +1,8 @@
 module tokenize_string
+!*****************************************************************************80
   use types, only: ik, cl
+  use ll, only: char_ll
+!*****************************************************************************80
   implicit none
   private
 !*****************************************************************************80
@@ -14,7 +17,7 @@ module tokenize_string
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine tokenize(str,delimiter,words,esta,emsg)
+  pure subroutine tokenize(str,delimiter,words,esta,emsg)
     character(len=*), intent(in) :: str
     character(len=1), intent(in) :: delimiter
     character(len=cl), allocatable, intent(out) :: words(:)
@@ -23,12 +26,11 @@ contains
     !
     integer(ik) :: i, ns, pos1
     character(len=cl) :: current_word
+    type(char_ll) :: words_ll
     !
     ns = len_trim(str); pos1 = 1
     current_word = ''
     !
-    allocate(words(0),stat=esta,errmsg=emsg)
-    if ( esta /= 0 ) return
     do i = 1, ns
       if( .not. ( str(i:i) == delimiter ) ) then
         current_word(pos1:pos1) = str(i:i)
@@ -37,7 +39,8 @@ contains
         if( pos1 > 1 ) then
           if( len_trim(current_word) /= 0 ) then
             current_word = adjustl(current_word)
-            words = [ character(len=cl) :: words, current_word ]
+            call words_ll%add(current_word,esta,emsg)
+            if( esta /= 0 ) return
           end if
         end if
         current_word = ''
@@ -47,13 +50,17 @@ contains
     ! Set the last word if not empty string
     if( len_trim(current_word) /= 0 ) then
       current_word = adjustl(current_word)
-      words = [ character(len=cl) :: words, current_word ]
+      call words_ll%add(current_word,esta,emsg)
+      if( esta /= 0 ) return
     end if
     ! Empty list
-    if ( size(words) == 0 ) then
+    if ( words_ll%is_empty() ) then
       esta = 1
       emsg = 'Tokenize: empty list'
     end if
+    ! Copy to array
+    call words_ll%fill_array(words,esta,emsg)
+    if( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''

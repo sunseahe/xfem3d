@@ -3,8 +3,8 @@ module read_input
   use types, only: ik, rk, lk, cl, stdout
   use general_routines, only: str2i, str2r, to_lower, strip_char, time
   use tokenize_string, only: tokenize, comma, equal
-  use point, only: dom, zero_pnt, point_3d_t
-  use fe_c3d10, only: nelnod, c3d10_t
+  use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
+  use fe_c3d10, only: nelnod, c3d10_t, c3d10_t_ll
   use mesh_data, only: fe_type, set_nodes, set_finite_elements
   use reinitalzation, only: set_reinitalization
 !*****************************************************************************80
@@ -116,11 +116,10 @@ module read_input
     real(rk) :: node_coo(dom)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
+    type(point_3d_t_ll) :: nodes_ll
     type(point_3d_t), allocatable :: nodes(:)
     !
     write(stdout,'(a)') 'Reading nodes ...'
-    allocate(nodes(0),stat=esta,errmsg=emsg)
-    if ( esta /= 0 ) return
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -144,8 +143,11 @@ module read_input
         call str2r(read_arg(i),node_coo(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      nodes = [ nodes, point_3d_t(x=node_coo) ]
+      call nodes_ll%add(point_3d_t(x=node_coo),esta,emsg)
     end do ra
+    ! Copy from linked list
+    call nodes_ll%fill_array(nodes,esta,emsg)
+    if ( esta /= 0 ) return
     ! Add nodes
     call set_nodes(nodes,esta,emsg)
     if ( esta /= 0 ) return
@@ -167,16 +169,10 @@ module read_input
     integer(ik) :: el_conn(nelnod)
     character(len=cl) :: inp_str
     character(len=cl), allocatable :: read_arg(:)
+    type(c3d10_t_ll) :: finite_elements_ll
     type(c3d10_t), allocatable :: finite_elements(:)
     !
-    type(time) :: t
-    !
     write(stdout,'(a)') 'Reading connectivity ...'
-    allocate(finite_elements(0),stat=esta,errmsg=emsg)
-    if ( esta /= 0 ) return
-    !
-    call t%start_timer()
-    !
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -200,14 +196,13 @@ module read_input
         call str2i(read_arg(i),el_conn(i-1),esta,emsg)
         if ( esta /= 0 ) return
       end do
-      !finite_elements = [ finite_elements, c3d10_t(nodes=zero_pnt,&
-      !&connectivity=el_conn) ]
+      call finite_elements_ll%add(c3d10_t(nodes=zero_pnt,&
+      &connectivity=el_conn),esta,emsg)
       if ( esta /= 0 ) return
     end do ra
-    !
-    call t%write_elapsed_time(stdout)
-    stop
-    !
+    ! Copy from linked list
+    call finite_elements_ll%fill_array(finite_elements,esta,emsg)
+    if ( esta /= 0 ) return
     ! Create element array
     call set_finite_elements(finite_elements,esta,emsg)
     if ( esta /= 0 ) return

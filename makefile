@@ -31,9 +31,9 @@ vpath %.f90 $(src_path)
 
 #xfem_tetra.f90 \
 #linked_list.f90 \
-#linked_list.f90 \
 
 SRCF = types.f90 \
+       linked_list.f90 \
        determinant.f90 \
        tokenize_string.f90 \
        lsf_test_functions.f90 \
@@ -63,9 +63,9 @@ ifeq ($(FC),ifort)
   # fortran
   all: FCFLAGS = $(FCFLAGSINTEL)
   all: FLFLAGS = $(FLFLAGSINTEL)
-  debug: FCFLAGS += $(FCFLAGSINTEL) -g -debug full -warn all -check all -std08 -diag-error-limit 1 -traceback -DDEBUG
+  debug: FCFLAGS += $(FCFLAGSINTEL) -g -debug full -warn all -check all -std08 -diag-error-limit 1 -traceback -D_DEBUG
   debug: FLFLAGS = $(FLFLAGSINTEL)
-  opt: FCFLAGS += $(FCFLAGSINTEL) -O3
+  opt: FCFLAGS += $(FCFLAGSINTEL) -O3 -D_DOUBLE
   opt: FLFLAGS = $(FLFLAGSINTEL)
   # c++
   all: CCFLAGS = $(CCFLAGSINTEL)
@@ -80,9 +80,9 @@ ifeq ($(FC),gfortran)
   # fortran
   all: FCFLAGS = $(FCFLAGSGCC) -O2
   all: FLFLAGS = $(FLFLAGSGCC)
-  debug: FCFLAGS += $(FCFLAGSGCC) -g -W -Wall -Wextra -fbounds-check -pedantic -std=f2008 -O0 -fbacktrace -ffpe-trap=zero,overflow,underflow -fmax-errors=1 -Wfatal-errors -DDEBUG
+  debug: FCFLAGS += $(FCFLAGSGCC) -g -W -Wall -Wextra -fbounds-check -pedantic -std=f2008 -O0 -fbacktrace -ffpe-trap=zero,overflow,underflow -fmax-errors=1 -Wfatal-errors -D_DEBUG
   debug: FLFLAGS = $(FLFLAGSGCC)
-  opt: FCFLAGS += $(FCFLAGSGCC) -O3 -march=native -ffast-math -funroll-loops
+  opt: FCFLAGS += $(FCFLAGSGCC) -O3 -march=native -ffast-math -funroll-loops -D_DOUBLE
   opt: FLFLAGS = $(FLFLAGSGCC)
   # c++
   all: CCFLAGS = $(CCFLAGSGCC)
