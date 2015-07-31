@@ -51,7 +51,7 @@ module sparse
     integer(ik) :: iparm(64) = 0
     type(mkl_pardiso_handle), pointer :: pt(:) => null()
   contains
-    procedure :: solve_direct => solve_direct_sls
+    procedure :: solve => solve_direct_sls
   end type sparse_linear_system_t
   ! Solution parameters
   integer(ik), parameter :: &
@@ -62,7 +62,7 @@ module sparse
   ! Paradiso storing routines
   integer(ik), parameter :: phs = 1, phr = 2, phd = 3
 !*****************************************************************************80
-  public :: sparse_square_matrix_t, sparse_direct_linear_system_t
+  public :: sparse_square_matrix_t, sparse_linear_system_t
 !*****************************************************************************80
 contains
 !*****************************************************************************80

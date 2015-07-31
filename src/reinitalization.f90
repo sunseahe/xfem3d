@@ -134,7 +134,6 @@ contains
         call calc_fe_c_mtx(finite_elements(e),fe_c_mtx,esta,emsg)
         !$omp critical
         ! Add to sparse matrix
-        !associate( c => finite_elements(e)%connectivity )
         do i = 1, nelnod
           do j = 1, nelnod
             ! symmetric matrix only upper part
@@ -147,7 +146,6 @@ contains
             end if
           end do
         end do
-        !end associate
         !$omp end critical
       end if
     end do
@@ -156,10 +154,18 @@ contains
     ! Allocate sparse matrix
     call c_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
+    ! temp
+!    block
+!      integer(ik) :: u
+!      open(newunit=u,file='test.mtx',iostat=esta,&
+!      &action='write',status='replace')
+!      call c_mtx%write_matrix(u,esta,emsg)
+!    end block
+!    stop
     ! Factorize
-    call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
-    &esta=esta,emsg=emsg)
-    if ( esta /= 0 ) return
+    !call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
+    !&esta=esta,emsg=emsg)
+    !if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
@@ -258,6 +264,15 @@ contains
     end do
     !$omp end parallel do
     if ( esta /= 0 ) return
+    block
+      integer(ik) :: u, i
+      open(newunit=u,file='test_b.mtx',iostat=esta,&
+      &action='write',status='replace')
+      do i = 1, size(r_vec%values)
+        write(u,'('//es//')') r_vec%values(i)
+      end do
+    end block
+    stop
     ! Sucess
     esta = 0
     emsg = ''

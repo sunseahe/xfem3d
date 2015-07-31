@@ -11,5 +11,7 @@
 *.inp
 *.log
 *.rec
+# Random
+*.mtx
 # Program
 xfem

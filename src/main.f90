@@ -1,7 +1,7 @@
 include 'mkl_service.f90'
 program xfem_tetra_test
   use omp_lib, only: omp_get_num_procs, omp_set_num_threads
-  USE mkl_service, ONLY: mkl_set_num_threads
+  use mkl_service, only: mkl_set_num_threads, mkl_free_buffers
   use types, only: ik, lk, cl, stdout, stderr, debug
   use general_routines, only: print_error, to_lower, str2i
   use read_input, only: read_data, input_file_name, inp_file
@@ -52,6 +52,10 @@ program xfem_tetra_test
 !*****************************************************************************80
   call mesh_data_finish(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
+!*****************************************************************************80
+! MKL free buffers
+!*****************************************************************************80
+  call mkl_free_buffers()
 !*****************************************************************************80
   stop 0
 !*****************************************************************************80
