@@ -27,6 +27,7 @@ module reinitalzation
   real(rk) :: sign_dist_tol = 1.0e-3_rk ! Tolerance for convergence
   logical(lk) :: write_par = .false. ! Write parameters to log file
   logical(lk) :: write_iter_t = .false. ! Reinitalization iteration time
+  logical(lk) :: iter_sol = .false. ! Iterative solver
   ! written
  !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
@@ -44,13 +45,14 @@ module reinitalzation
 contains
 !*****************************************************************************80
   subroutine set_reinitalization(alpha_in,c_in,rho_in,num_reinit_in,&
-    &num_conv_iter_in,sign_dist_tol_in)
+    &num_conv_iter_in,sign_dist_tol_in,iter_sol_in)
     integer(ik), optional, intent(in) :: num_reinit_in
     integer(ik), optional, intent(in) :: num_conv_iter_in
     real(rk), optional, intent(in) :: alpha_in
     real(rk), optional, intent(in) :: c_in
     real(rk), optional, intent(in) :: rho_in
     real(rk), optional, intent(in) :: sign_dist_tol_in
+    logical(lk), optional, intent(in) :: iter_sol_in
     ! set parameters
     if (present(num_reinit_in)) num_reinit = num_reinit_in
     if (present(num_conv_iter_in)) num_conv_iter = num_conv_iter_in
@@ -58,6 +60,7 @@ contains
     if (present(c_in)) c = c_in
     if (present(rho_in)) rho = rho_in
     if (present(sign_dist_tol_in)) sign_dist_tol = sign_dist_tol_in
+    if (present(iter_sol_in)) iter_sol = .true.
     configured = .true.
     !
   end subroutine set_reinitalization
@@ -154,14 +157,6 @@ contains
     ! Allocate sparse matrix
     call c_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
-    ! temp
-!    block
-!      integer(ik) :: u
-!      open(newunit=u,file='test.mtx',iostat=esta,&
-!      &action='write',status='replace')
-!      call c_mtx%write_matrix(u,esta,emsg)
-!    end block
-!    stop
     ! Factorize
     call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
     &esta=esta,emsg=emsg)
@@ -264,15 +259,6 @@ contains
     end do
     !$omp end parallel do
     if ( esta /= 0 ) return
-!    block
-!      integer(ik) :: u, i
-!      open(newunit=u,file='test_b.mtx',iostat=esta,&
-!      &action='write',status='replace')
-!      do i = 1, size(r_vec%values)
-!        write(u,'('//es//')') r_vec%values(i)
-!      end do
-!    end block
-!    stop
     ! Sucess
     esta = 0
     emsg = ''
@@ -374,7 +360,7 @@ contains
       write_par = .true.
     end if
     ! Solve
-    write(stdout,'(a)') 'Solving reinitalization equation ...'
+    write(stdout,'(a)') 'Solving the reinitalization equation ...'
     call t_complete%start_timer()
     ! Calculate c matrix
     call c_mtx_setup(esta,emsg)

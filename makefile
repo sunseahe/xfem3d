@@ -44,6 +44,7 @@ SRCF = types.f90 \
        mesh_data.f90 \
        scalar_field.f90 \
        reinitalization.f90 \
+       hamilton_jacobi.f90 \
        read_input.f90 \
        write_odb.f90 \
        volume_integral.f90 \
