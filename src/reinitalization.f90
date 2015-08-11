@@ -363,11 +363,9 @@ contains
     write(stdout,'(a)') 'Solving the reinitalization equation ...'
     call t_complete%start_timer()
     ! Calculate c matrix
-    call c_mtx_setup(esta,emsg)
-    if ( esta /= 0 ) return
+    call c_mtx_setup(esta,emsg); if ( esta /= 0 ) return
     ! Set up right hand side vector
-    call r_vec%set(esta=esta,emsg=emsg)
-    if ( esta /= 0 ) return
+    call r_vec%set(esta=esta,emsg=emsg); if ( esta /= 0 ) return
     !
     sd_tol_previous = huge(1.0_rk)
     converged = .false.
