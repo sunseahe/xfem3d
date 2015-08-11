@@ -163,9 +163,9 @@ contains
 !    end block
 !    stop
     ! Factorize
-    !call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
-    !&esta=esta,emsg=emsg)
-    !if ( esta /= 0 ) return
+    call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
+    &esta=esta,emsg=emsg)
+    if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
@@ -264,15 +264,15 @@ contains
     end do
     !$omp end parallel do
     if ( esta /= 0 ) return
-    block
-      integer(ik) :: u, i
-      open(newunit=u,file='test_b.mtx',iostat=esta,&
-      &action='write',status='replace')
-      do i = 1, size(r_vec%values)
-        write(u,'('//es//')') r_vec%values(i)
-      end do
-    end block
-    stop
+!    block
+!      integer(ik) :: u, i
+!      open(newunit=u,file='test_b.mtx',iostat=esta,&
+!      &action='write',status='replace')
+!      do i = 1, size(r_vec%values)
+!        write(u,'('//es//')') r_vec%values(i)
+!      end do
+!    end block
+!    stop
     ! Sucess
     esta = 0
     emsg = ''
