@@ -15,6 +15,7 @@ module scalar_field
     procedure :: assemble_element_nodal_values
     procedure :: delete
     procedure :: write_field
+    procedure :: max_value
   end type  scalar_field_t
 !*****************************************************************************80
   public :: scalar_field_t
@@ -197,5 +198,15 @@ module scalar_field
     emsg = ''
     !
   end subroutine write_field
+!*****************************************************************************80
+  pure real(rk) function max_value(self)
+    class(scalar_field_t), intent(in) :: self
+    if ( .not. allocated(self%values) ) then
+      max_value = 0.0_rk
+      return
+    else
+      max_value = maxval(self%values)
+    end if
+  end function max_value
 !*****************************************************************************80
 end module scalar_field

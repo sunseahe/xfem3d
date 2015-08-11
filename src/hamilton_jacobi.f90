@@ -15,8 +15,10 @@ module hamilton_jacobi
 !*****************************************************************************80
   logical(lk), protected :: configured = .false.
 !*****************************************************************************80
-  integer(ik) :: num_max_advect = 50 ! Maximal number of advection steps
+  integer(ik) :: max_num_advect = 50 ! Maximal number of advection steps
+  real(rk) :: max_alpha_t = 1.0_rk ! Maximal alpha correction
   real(rk) :: d_t = 0.0e0_rk ! Time step - to be calculated
+  logical(lk) :: iter_sol = .false. ! Iterative solver
 !*****************************************************************************80
   type(sparse_square_matrix_t), save :: m_mtx
   type(sparse_linear_system_t), save :: linear_system
@@ -29,10 +31,17 @@ module hamilton_jacobi
 !*****************************************************************************80
 contains
 !*****************************************************************************80
-  subroutine set_hamilton_jacobi(num_max_advect_in)
-    integer(ik), optional, intent(in) :: num_max_advect_in
-    if (present(num_max_advect_in)) num_max_advect = num_max_advect_in
+  subroutine set_hamilton_jacobi(max_num_advect_in,max_alpha_t_in,&
+    &iter_sol_in)
+    integer(ik), optional, intent(in) :: max_num_advect_in
+    real(rk), optional, intent(in) :: max_alpha_t_in
+    logical(lk), optional, intent(in) :: iter_sol_in
+    !
+    if (present(max_num_advect_in)) max_num_advect = max_num_advect_in
+    if (present(max_alpha_t_in)) max_alpha_t = max_alpha_t_in
+    if (present(iter_sol_in)) iter_sol = .true.
     configured = .true.
+    !
   end subroutine set_hamilton_jacobi
 !*****************************************************************************80
 ! M matrix fe
@@ -221,9 +230,12 @@ contains
 !*****************************************************************************80
 ! Calculate advection
 !*****************************************************************************80
-  subroutine caluclate_advection(lsf_inout,v_in,esta,emsg)
+  subroutine caluclate_advection(lsf_inout,v_in,num_advect,alpha_t,&
+    &esta,emsg)
     type(scalar_field_t), target, intent(inout) :: lsf_inout
     type(scalar_field_t), target, intent(in) :: v_in
+    integer(ik), intent(in) :: num_advect
+    real(rk), intent(in) :: alpha_t
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
@@ -239,10 +251,16 @@ contains
     lsf => lsf_inout
     v   => v_in
     call r_vec%set(esta=esta,emsg=emsg); if ( esta /= 0 ) return
-    ! Advection
+    ! Advect
     write(stdout,'(a)') 'Solving the Hamilton Jacobi equation ...'
     call t_complete%start_timer()
-
+    ! Calculate stable time increment
+    d_t = alpha_t * char_fe_dim / v%max_value()
+    !
+    do i = 1, min(max_num_advect,num_advect)
+      call r_vec_setup(esta,emsg); if ( esta /= 0 ) return
+    end do
+    !
     call t_complete%write_elapsed_time(stdout,'Advection finished, &
     &elapsed time')
     !

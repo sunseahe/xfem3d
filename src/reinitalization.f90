@@ -27,8 +27,8 @@ module reinitalzation
   real(rk) :: sign_dist_tol = 1.0e-3_rk ! Tolerance for convergence
   logical(lk) :: write_par = .false. ! Write parameters to log file
   logical(lk) :: write_iter_t = .false. ! Reinitalization iteration time
-  logical(lk) :: iter_sol = .false. ! Iterative solver
   ! written
+  logical(lk) :: iter_sol = .false. ! Iterative solver
  !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
   type(scalar_field_t), save :: sdf
