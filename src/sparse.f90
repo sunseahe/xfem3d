@@ -1,9 +1,10 @@
 include 'mkl_pardiso.f90'
 module sparse
 !*****************************************************************************80
+  use blas95, only: dot
   use iso_fortran_env, only: sp => real32, dp => real64, int64
-  use types, only: ik, rk, lk, cl, eps, debug, es
-  use general_routines, only: resize_vec
+  use types, only: ik, rk, lk, cl, eps, debug, es, nl
+  use general_routines, only: resize_vec, time, pnorm
   use mkl_pardiso, only: mkl_pardiso_handle, pardiso
 !*****************************************************************************80
   implicit none
@@ -47,11 +48,12 @@ module sparse
 !*****************************************************************************80
   type :: sparse_linear_system_t
     private
-    logical(lk) :: configured = .false.
+    logical(lk) :: configured_direct = .false.
     integer(ik) :: iparm(64) = 0
     type(mkl_pardiso_handle), pointer :: pt(:) => null()
   contains
-    procedure :: solve => solve_direct_sls
+    procedure :: solve_dir => solve_direct_sls
+    procedure, nopass :: solve_iter => bicgstab_jac_prec
   end type sparse_linear_system_t
   ! Solution parameters
   integer(ik), parameter :: &
@@ -61,6 +63,50 @@ module sparse
   &  mnum   = 1
   ! Paradiso storing routines
   integer(ik), parameter :: phs = 1, phr = 2, phd = 3
+!*****************************************************************************80
+  interface mkl_csrsymv
+    subroutine mkl_scsrsymv(uplo,m,a,ia,ja,x,y)
+      import :: ik, sp
+      character(len=1) :: uplo
+      integer(ik) :: m
+      real(sp) :: a(*)
+      integer(ik) :: ia(*), ja(*)
+      real(sp) :: x(*), y(*)
+    end subroutine mkl_scsrsymv
+    subroutine mkl_dcsrsymv(uplo,m,a,ia,ja,x,y)
+      import :: ik, dp
+      character(len=1) :: uplo
+      integer(ik) :: m
+      real(dp) :: a(*)
+      integer(ik) :: ia(*), ja(*)
+      real(dp) :: x(*), y(*)
+    end subroutine mkl_dcsrsymv
+  end interface mkl_csrsymv
+!*****************************************************************************80
+  interface mkl_csrsv
+    subroutine mkl_scsrsv( transa, m, alpha, matdescra, &
+    &val, indx, pntrb, pntre,  x, y)
+      import :: ik, sp
+      character(len=1) :: transa
+      character(len=1) :: matdescra(*)
+      integer(ik) :: m
+      real(sp) :: alpha
+      integer(ik) :: indx(*), pntrb(*), pntre(*)
+      real(sp) :: val(*)
+      real(sp) :: y(*), x(*)
+    end subroutine mkl_scsrsv
+    subroutine mkl_dcsrsv( transa, m, alpha, matdescra, &
+    &val, indx, pntrb, pntre,  x, y)
+      import :: ik, dp
+      character(len=1) :: transa
+      character(len=1) :: matdescra(*)
+      integer(ik) :: m
+      real(dp) :: alpha
+      integer(ik) :: indx(*), pntrb(*), pntre(*)
+      real(dp) :: val(*)
+      real(dp) :: y(*), x(*)
+    end subroutine mkl_dcsrsv
+  end interface mkl_csrsv
 !*****************************************************************************80
   public :: sparse_square_matrix_t, sparse_linear_system_t
 !*****************************************************************************80
@@ -303,7 +349,7 @@ contains
     !
   end subroutine delete_ssm
 !*****************************************************************************80
-! Solve routine
+! Direct solve routine
 !*****************************************************************************80
   subroutine solve_direct_sls(self,job,a,b,x,mem_used,esta,emsg)
     class(sparse_linear_system_t), intent(inout) :: self
@@ -313,13 +359,13 @@ contains
     real(rk), optional, intent(out) :: x(:)
     integer(int64), optional, intent(out) :: mem_used
     integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
+    character(len=*), intent(out) :: emsg
     !
     integer(ik), parameter :: one = 1
     integer(ik) :: phase, idum(1)
     real(rk) :: rdum(1)
     ! Set solution parameters
-    if ( .not. self%configured ) then
+    if ( .not. self%configured_direct ) then
       !
       allocate(self%pt(64),stat=esta,errmsg=emsg)
       if ( esta /= 0 ) return
@@ -341,7 +387,7 @@ contains
       self%iparm(28) = 0 ! Double precision
 #endif
       !
-      self%configured = .true.
+      self%configured_direct = .true.
     end if
     idum = 1
     rdum = 1.0_rk
@@ -387,7 +433,7 @@ contains
         return
       end if
       deallocate(self%pt,stat=esta,errmsg=emsg); if ( esta /= 0 ) return
-      self%configured = .false.
+      self%configured_direct = .false.
     case default
       esta = -1
       emsg = 'Solve sls: unknown job'
@@ -396,47 +442,150 @@ contains
     esta = 0
     emsg = ''
     !
-  end subroutine solve_direct_sls
+    contains
 !*****************************************************************************80
 ! Error handling
 !*****************************************************************************80
-  subroutine pardiso_err(esta,emsg)
-    integer(ik), intent(in) :: esta
-    character(len=cl), intent(out) :: emsg
+    subroutine pardiso_err(esta,emsg)
+      integer(ik), intent(in) :: esta
+      character(len=*), intent(out) :: emsg
+      !
+      character(len=cl) :: adit_emsg
+      !
+      select case ( esta )
+      case ( -1 )
+        adit_emsg = 'Input inconsistent'
+      case ( -2 )
+        adit_emsg = 'Not enough memory'
+      case ( -3 )
+        adit_emsg = 'Reordering problem'
+      case ( -4 )
+        adit_emsg = 'Zero pivot, numerical factorization or iterative &
+        &refinement problem'
+      case ( -5 )
+        adit_emsg = 'Unclassified (internal) error'
+      case ( -6 )
+        adit_emsg = 'Reordering failed (matrix types 11 and 13 only)'
+      case ( -7 )
+        adit_emsg = 'Diagonal matrix is singular'
+      case ( -8 )
+        adit_emsg = '32-bit integer overflow problem'
+      case ( -9 )
+        adit_emsg = 'Not enough memory for OOC'
+      case ( -10 )
+        adit_emsg = 'Problems with opening OOC temporary files'
+      case ( -11 )
+        adit_emsg = 'Read/write problems with the OOC data file'
+      case ( -20 )
+        adit_emsg = 'Rhs vector or solution vector not present'
+      case default
+        adit_emsg = 'Unknown error'
+      end select
+      emsg = 'Solve sls: pardiso error - '// trim(adit_emsg)
+      !
+    end subroutine pardiso_err
+  end subroutine solve_direct_sls
+!*****************************************************************************80
+! Iterative solver
+!*****************************************************************************80
+  subroutine bicgstab_jac_prec(a,b,x,niter,tol,info,esta,emsg)
+    type(sparse_square_matrix_t), intent(in) :: a
+    real(rk), intent(in) :: b(:)
+    real(rk), intent(out) :: x(:)
+    integer(ik), intent(in) :: niter
+    real(rk), intent(in) :: tol
+    character(len=*), optional, intent(out) :: info
+    integer(ik), intent(out) :: esta
+    character(len=*), intent(out) :: emsg
     !
-    character(len=cl) :: adit_emsg
+    integer(ik) :: i
+    real(rk), parameter :: one = 1.0_rk
+    real(rk) :: rho, rho_old, alpha, beta, omega
+    real(rk), allocatable :: r(:), r_tilde(:), p(:), p_hat(:),&
+    & v(:), s(:), s_hat(:), tmp(:)
+    character(len=1), parameter :: transa = 'N'
+    character(len=1), parameter :: matdescra(3) = ['D','U','N']
+    character(len=1), parameter :: uplo = 'U'
+    type(time) :: t
     !
-    select case ( esta )
-    case ( -1 )
-      adit_emsg = 'Input inconsistent'
-    case ( -2 )
-      adit_emsg = 'Not enough memory'
-    case ( -3 )
-      adit_emsg = 'Reordering problem'
-    case ( -4 )
-      adit_emsg = 'Zero pivot, numerical factorization or iterative &
-      &refinement problem'
-    case ( -5 )
-      adit_emsg = 'Unclassified (internal) error'
-    case ( -6 )
-      adit_emsg = 'Reordering failed (matrix types 11 and 13 only)'
-    case ( -7 )
-      adit_emsg = 'Diagonal matrix is singular'
-    case ( -8 )
-      adit_emsg = '32-bit integer overflow problem'
-    case ( -9 )
-      adit_emsg = 'Not enough memory for OOC'
-    case ( -10 )
-      adit_emsg = 'Problems with opening OOC temporary files'
-    case ( -11 )
-      adit_emsg = 'Read/write problems with the OOC data file'
-    case ( -20 )
-      adit_emsg = 'Rhs vector or solution vector not present'
-    case default
-      adit_emsg = 'Unknown error'
-    end select
-    emsg = 'Solve sls: pardiso error - '// trim(adit_emsg)
+    call t%start_timer()
     !
-  end subroutine pardiso_err
+    allocate(r(a%n),r_tilde(a%n),p(a%n),p_hat(a%n),v(a%n),s(a%n),&
+    &s_hat(a%n),tmp(a%n),stat=esta,errmsg=emsg); if ( esta /= 0 ) return
+    !
+    x = 0.0_rk
+    call mkl_csrsymv(uplo,a%n,a%ax,a%ai,a%aj,x,tmp)
+    r = b - tmp
+    r_tilde = r
+    omega = 1.0_rk
+    !
+    i = 1
+    loop: do
+      if ( i > niter ) then
+        esta = -1
+        emsg = 'biCGSTAB : not converged in the given number&
+        & of iterations'
+        exit loop
+      end if
+      rho = dot(r_tilde,r)
+      if ( abs(rho) <= tiny(1.0_rk) ) then
+        esta = -1
+        emsg = 'biCGSTAB : breakdown - rho'
+        exit loop
+      end if
+      !
+      if ( i > 1 ) then
+        beta = (rho / rho_old ) * ( alpha / omega )
+        p = r + beta * ( p - omega * v )
+      else
+        p = r
+      end if
+      !
+      call mkl_csrsv(transa,a%n,one,matdescra,a%ax,a%aj,a%ai(1:a%n),&
+      &a%ai(2:a%n+1),p,p_hat)
+      call mkl_csrsymv(uplo,a%n,a%ax,a%ai,a%aj,p_hat,v)
+      alpha = rho / dot(r_tilde,v)
+      s = r - alpha * v
+      if ( pnorm(2,s) <= tol ) then
+        x = x + alpha * p_hat
+        esta = 0
+        emsg = ''
+        exit loop
+      end if
+      !
+      call mkl_csrsv(transa,a%n,one,matdescra,a%ax,a%aj,a%ai(1:a%n),&
+      &a%ai(2:a%n+1),s,s_hat)
+      call mkl_csrsymv(uplo,a%n,a%ax,a%ai,a%aj,s_hat,tmp)
+      omega = dot(tmp,s) / dot(tmp,tmp)
+      if ( abs(omega) <= tiny(1.0_rk) ) then
+        esta = -1
+        emsg = 'biCGSTAB : breakdown - omega'
+        exit loop
+      end if
+      !
+      x = x + alpha * p_hat + omega * s_hat
+      r = s - omega * tmp
+      if ( pnorm(2,r) <= tol ) then
+        esta = 0
+        emsg = ''
+        exit loop
+      end if
+      rho_old = rho
+      i = i + 1
+    end do loop
+    !
+    call mkl_csrsymv(uplo,a%n,a%ax,a%ai,a%aj,x,tmp)
+    r = b - tmp
+    !
+    if ( present(info) ) then
+      write(info,'(a,a,a,i0,a,a,'//es//',a,a,a,a)') &
+      & 'biCGSTAB:', nl, &
+      & ' - number of iterations: ', i, nl, &
+      & ' - tolerance of the solution: ', pnorm(2,r), nl, &
+      & ' - elapsed time: ', trim(t%elapsed_time()), ' s'
+    end if
+    !
+  end subroutine bicgstab_jac_prec
+
 !*****************************************************************************80
 end module sparse

@@ -1,13 +1,13 @@
 module volume_integral
-  use types, only: ik, rk, lk, cl, stdout
+  use types, only: ik, rk, lk, cl, stdout, log_file
   use point, only: dom, point_3d_t
   use fe_c3d10, only:  nelnod, c3d10_t
   use mesh_data, only: nnod, nodes, nfe, finite_elements
   use scalar_field, only: scalar_field_t
   !use xtet, only: set_sub_xtets
   use lsf_test_functions
-  use write_odb, only: start_odb_api, finish_odb_api, write_model_data,  &
-  & create_step, create_frame, write_scalar_field, close_odb_file
+  use write_odb, only: write_model_data, create_step, create_frame,  &
+  &  write_scalar_field, close_odb_file
   use read_input, only: input_file_name
   use reinitalzation, only: calculate_reinitalization, r_conf => configured, &
   & reinitalization_statistics
@@ -38,8 +38,6 @@ contains
     logical(lk), allocatable :: lsf_field_val_cal(:)
     ! Allocate already calculated values
     allocate(lsf_field_val_cal(nnod),stat=esta,errmsg=emsg)
-    ! Start odb api
-    call start_odb_api()
     ! Model data
     call write_model_data(1,esta,emsg)
     if( esta /= 0 ) return
@@ -59,8 +57,6 @@ contains
     ! Close odb file
     call close_odb_file(esta,emsg)
     if( esta /= 0 ) return
-    ! Finish odb api
-    call finish_odb_api()
     !
   contains
     subroutine write_ind_fun(name,frame_num,time,test_fun,esta,emsg)
@@ -239,7 +235,7 @@ contains
     !real(rk) :: volume
     !character(len=cl) :: gst_inp_file_name
     !
-    write(stdout,'(a)') 'Writing test functions to odb ...'
+    write(log_file,'(a)') 'Writing test functions to odb ...'
     call write_test_functions(esta,emsg)
     if( esta /= 0 ) return
     !

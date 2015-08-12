@@ -1,6 +1,6 @@
 module read_input
 !*****************************************************************************80
-  use types, only: ik, rk, lk, cl, stdout
+  use types, only: ik, rk, lk, cl, stdout, log_file
   use general_routines, only: str2i, str2r, to_lower, strip_char, time
   use tokenize_string, only: tokenize, comma, equal
   use point, only: dom, zero_pnt, point_3d_t, point_3d_t_ll
@@ -11,7 +11,7 @@ module read_input
   implicit none
   private
 !*****************************************************************************80
-  integer(ik) :: inp_file = 0
+  integer(ik), parameter :: inp_file = 10
   character(len=cl) :: input_file_name = ''
   !
   logical(lk) :: end_of_file = .false.
@@ -98,6 +98,8 @@ module read_input
         return
       end select
     end do ra
+    ! Close input file
+    close(inp_file)
     ! Sucess
     esta = 0
     emsg = ''
@@ -119,7 +121,7 @@ module read_input
     type(point_3d_t_ll) :: nodes_ll
     type(point_3d_t), allocatable :: nodes(:)
     !
-    write(stdout,'(a)') 'Reading nodes ...'
+    write(log_file,'(a)') 'Reading nodes ...'
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -172,7 +174,7 @@ module read_input
     type(c3d10_t_ll) :: finite_elements_ll
     type(c3d10_t), allocatable :: finite_elements(:)
     !
-    write(stdout,'(a)') 'Reading connectivity ...'
+    write(log_file,'(a)') 'Reading connectivity ...'
     ra: do
       call read_input_string(inp_str,rstat)
       select case(rstat)
@@ -228,7 +230,7 @@ module read_input
       character(len=cl) :: inp_str
       character(len=cl), allocatable :: read_arg(:), arg_val(:)
       !
-      write(stdout,'(a)') 'Reading reinitalization parameters ...'
+      write(log_file,'(a)') 'Reading reinitalization parameters ...'
       call set_reinitalization() ! default reinitalization parameters
       ra: do
         call read_input_string(inp_str,rstat)
@@ -272,8 +274,10 @@ module read_input
               call set_reinitalization(rho_in=real_read)
             case ('signed distance function tolerance')
               call str2r(arg_val(2),real_read,esta,emsg)
-               if ( esta /= 0 ) return
+              if ( esta /= 0 ) return
               call set_reinitalization(sign_dist_tol_in=real_read)
+            case ( 'iterative solver')
+              call set_reinitalization(iter_sol_in=.true.)
             case default
               esta = -1
               emsg =  w1 // 'unknown value >' // trim(arg_val(1)) // '<'

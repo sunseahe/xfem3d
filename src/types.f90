@@ -29,7 +29,9 @@ module types
   logical(lk), parameter :: debug = .true.
 #endif
 !*****************************************************************************80
-  character(len=1), parameter :: nl = achar(10)
+  character(len=1), parameter :: nl = achar(10) ! New line character
+!*****************************************************************************80
+  integer(ik), parameter :: log_file = 11
 !*****************************************************************************80
   public :: ik, &
   & int8, &
@@ -43,7 +45,8 @@ module types
   & stdin, &
   & stderr, &
   & debug, &
-  & nl
+  & nl, &
+  & log_file
 !*****************************************************************************80
 end module types
 
@@ -84,7 +87,8 @@ module general_routines
   & resize_vec, &
   & pnorm, &
   & strip_char, &
-  & time
+  & time, &
+  & change_extension
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -308,10 +312,11 @@ contains
     self%saved_time = self%ctime_fnk()
   end subroutine start_timer_sub
 !
-  function elapsed_time_fnk(self) result(elapsed_time)
+  character(len=cl) function elapsed_time_fnk(self)
     class(time), intent(in) :: self
-    real(rk) :: elapsed_time
-    elapsed_time = self%ctime_fnk() - self%saved_time
+    real(rk) :: et
+    et = self%ctime_fnk() - self%saved_time
+    write(elapsed_time_fnk,'(es9.1e3)') et
   end function elapsed_time_fnk
 !
   real(rk) function ctime_fnk()
@@ -344,6 +349,19 @@ contains
     end if
     !
   end subroutine write_elapsed_time
+!*****************************************************************************80
+! Change extension
+!*****************************************************************************80
+  pure character(len=cl) function change_extension(name,ext)
+    character(len=*), intent(in) :: name
+    character(len=3), intent(in) :: ext
+    !
+    integer(ik) :: slen
+    !
+    slen = len_trim(name)
+    write(change_extension,'(a,a)') name(1:slen-3), ext
+    !
+  end function change_extension
 !*****************************************************************************80
 end module general_routines
 

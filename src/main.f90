@@ -2,11 +2,12 @@ include 'mkl_service.f90'
 program xfem_tetra_test
   use omp_lib, only: omp_get_num_procs, omp_set_num_threads
   use mkl_service, only: mkl_set_num_threads, mkl_free_buffers
-  use types, only: ik, lk, cl, stdout, stderr, debug
-  use general_routines, only: print_error, to_lower, str2i
+  use types, only: ik, lk, cl, stdout, stderr, debug, log_file
+  use general_routines, only: print_error, to_lower, str2i, change_extension
   use read_input, only: read_data, input_file_name, inp_file
   use mesh_data, only: mesh_data_statistics, mesh_data_finish
   use volume_integral, only: test_functions
+  use write_odb, only: start_odb_api, finish_odb_api
   implicit none
 !*****************************************************************************80
   integer(ik) :: esta = 0
@@ -24,37 +25,49 @@ program xfem_tetra_test
   ! Command line checks
   call command_line_checks(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
-  ! Open input file
+!*****************************************************************************80
+! Open input file
+!*****************************************************************************80
   inquire(file=input_file_name,exist=input_file_given)
   if ( .not.input_file_given ) then
     esta = -1
     emsg = 'Input file does not exist.'
   end if
   if ( esta /= 0 ) call print_error(esta,emsg)
-  open(newunit=inp_file,file=input_file_name,iostat=esta,iomsg=emsg,&
+  open(unit=inp_file,file=input_file_name,iostat=esta,iomsg=emsg,&
   &action='read',status='old')
   if ( esta /= 0 ) call print_error(esta,emsg)
 !*****************************************************************************80
+! Create log file
+!*****************************************************************************80
+  open(unit=log_file,file=change_extension(input_file_name,'log'),&
+  &iostat=esta,iomsg=emsg,action='write',status='replace')
+  if ( esta /= 0 ) call print_error(esta,emsg)
+!*****************************************************************************80
+! Start odb api
+!*****************************************************************************80
+  call start_odb_api()
+!*****************************************************************************80
 ! Read data
 !*****************************************************************************80
+  write(log_file,'(a)') 'Reading data ...'
   call read_data(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
-  write(stdout,'(a)') 'Read data complete.'
+  write(log_file,'(a)') 'Read data complete.'
   call mesh_data_statistics()
 !*****************************************************************************80
 ! Calculate volume
 !*****************************************************************************80
   call test_functions(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
-  write(stdout,'(a)') 'Tests complete.'
+  write(log_file,'(a)') 'Tests complete.'
 !*****************************************************************************80
 ! Finish
 !*****************************************************************************80
   call mesh_data_finish(esta,emsg)
   if ( esta /= 0 ) call print_error(esta,emsg)
-!*****************************************************************************80
-! MKL free buffers
-!*****************************************************************************80
+  close(log_file)
+  call finish_odb_api()
   call mkl_free_buffers()
 !*****************************************************************************80
   stop 0
@@ -136,8 +149,8 @@ contains
     if ( cpus_given ) then
       available_cpus = omp_get_num_procs() ! Get num of available cpu
       if ( cpus > available_cpus ) then
-        write(stdout,'(a,i0,a,i0,a)') 'The number of cpus requested (',cpus,&
-        &') exceeds the number of available cpus (',available_cpus,').'
+        write(stdout,'(a,i0,a,i0,a)') 'The number of cpus requested (',&
+        &cpus, ') exceeds the number of available cpus (',available_cpus,').'
         cpus = available_cpus
       end if
     end if

@@ -1,7 +1,7 @@
 module reinitalzation
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
-  use types, only: ik, int64, rk, lk, es, debug, stdout, nl
+  use types, only: ik, int64, rk, lk, es, debug, stdout, nl, log_file, cl
   use general_routines, only: size_mtx, outer, pnorm, time, &
   &write_dense_mtx_real
   use memory_storage, only: size_in_bytes, write_size_of_storage
@@ -29,9 +29,11 @@ module reinitalzation
   logical(lk) :: write_iter_t = .false. ! Reinitalization iteration time
   ! written
   logical(lk) :: iter_sol = .false. ! Iterative solver
- !*****************************************************************************80
+  integer(ik) :: iter_niter = 50 ! Number of iterations for iterative solver
+  real(rk) :: iter_tol = 1.0e-16_rk ! Tolerance
+!*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
-  type(scalar_field_t), save :: sdf
+  type(scalar_field_t), pointer :: sdf => null()
   type(scalar_field_t), save :: r_vec
 !*****************************************************************************80
   type(sparse_square_matrix_t), save :: c_mtx
@@ -157,10 +159,12 @@ contains
     ! Allocate sparse matrix
     call c_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
-    ! Factorize
-    call linear_system%solve(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
-    &esta=esta,emsg=emsg)
-    if ( esta /= 0 ) return
+    ! Factorize if direct solution
+    if ( .not. iter_sol ) then
+      call linear_system%solve_dir(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
+      &esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
+    end if
     ! Sucess
     esta = 0
     emsg = ''
@@ -332,6 +336,7 @@ contains
     integer(ik) :: conv_iter
     real(rk) :: sd_tol_previous, sd_tol_current, rel_tol
     logical(lk) :: converged
+    character(len=cl) :: info
     type(time) :: t_complete, t_iter
     ! Check
     if ( .not. configured ) then
@@ -340,7 +345,7 @@ contains
       return
     end if
     ! Copy scalar fields
-    call sdf%copy(sdf_inout,esta,emsg); if ( esta /= 0 ) return
+    sdf => sdf_inout
     call sdf_0%copy(sdf_inout,esta,emsg); if ( esta /= 0 ) return
     ! Setup parameters
     if ( .not. status_par ) then
@@ -350,17 +355,23 @@ contains
     end if
     ! Parameters
     if ( .not.write_par ) then
-      write(stdout,'(a)')         'Solution parameters '
-      write(stdout,'(a,i0)')      ' - num of steps is: ', num_reinit
-      write(stdout,'(a,'//es//')') ' - stable time inc is: ', d_t
-      write(stdout,'(a,'//es//')') ' - step corr par is: ', alpha
-      write(stdout,'(a,'//es//')') ' - diffusion par is: ', c
-      write(stdout,'(a,'//es//')') ' - enforce dirchlet: ', rho
-      write(stdout,'(a,'//es//')') ' - solution tolerance: ', sign_dist_tol
+      write(log_file,'(a)')         'Solution parameters '
+      write(log_file,'(a,i0)')      ' - num of steps is: ', num_reinit
+      write(log_file,'(a,'//es//')') ' - stable time inc is: ', d_t
+      write(log_file,'(a,'//es//')') ' - step corr par is: ', alpha
+      write(log_file,'(a,'//es//')') ' - diffusion par is: ', c
+      write(log_file,'(a,'//es//')') ' - enforce dirchlet: ', rho
+      write(log_file,'(a,'//es//')') ' - solution tolerance: ', sign_dist_tol
       write_par = .true.
     end if
     ! Solve
-    write(stdout,'(a)') 'Solving the reinitalization equation ...'
+    if ( .not. iter_sol ) then
+      write(log_file,'(a)') 'Solving the reinitalization &
+      &equation with direct solver ...'
+    else
+      write(log_file,'(a)') 'Solving the reinitalization &
+      &equation with iterative solver ...'
+    end if
     call t_complete%start_timer()
     ! Calculate c matrix
     call c_mtx_setup(esta,emsg); if ( esta /= 0 ) return
@@ -373,10 +384,20 @@ contains
     do i = 1, num_reinit
       if ( i == 1 .and. .not. write_iter_t ) call t_iter%start_timer()
       call r_vec_setup(esta,emsg); if ( esta /= 0 ) return
-      ! Backsubstitution
-      call linear_system%solve(job=2,a=c_mtx,b=r_vec%values,x=sdf%values&
-      &,esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
+      ! Backsubstitution or iterative solve
+      if ( .not. iter_sol ) then
+        call linear_system%solve_dir(job=2,a=c_mtx,b=r_vec%values,&
+        &x=sdf%values,esta=esta,emsg=emsg)
+        if ( esta /= 0 ) return
+      else
+        call linear_system%solve_iter(a=c_mtx,b=r_vec%values,&
+        &x=sdf%values,niter=iter_niter,tol=iter_tol,info=info,&
+        & esta=esta,emsg=emsg)
+        if ( esta /= 0 ) return
+        !if ( i == 1 .and. .not. write_iter_t ) then
+          write(log_file,'(a)') trim(info)
+        !end if
+      end if
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
       if ( esta /= 0 ) return
@@ -392,35 +413,37 @@ contains
       end if
       sd_tol_previous = sd_tol_current
       if ( i == 1 .and. .not. write_iter_t ) then
-        call t_complete%write_elapsed_time(stdout,'One reinitalzation &
+        call t_complete%write_elapsed_time(log_file,'One reinitalzation &
         &iteration time')
         write_iter_t = .true.
       end if
     end do
     ! Write status
     if ( .not. converged ) then
-      write(stdout,'(a,'//es//',a,i0,a,a,a,'//es//',a)') &
+      write(log_file,'(a,'//es//',a,i0,a,a,a,'//es//',a)') &
       & '**Warning: solution relative tolerance (', rel_tol, &
       & ' ) after ', num_reinit , ' iterations, ', nl, 'is larger than &
       & specified (', sign_dist_tol ,' ).'
-      write(stdout,'(a,'//es//',a)') 'Acheved a value of ', sd_tol_current, &
+      write(log_file,'(a,'//es//',a)') 'Acheved a value of ', sd_tol_current, &
       ' for signed distance norm approximation.'
     else
-      write(stdout,'(a,'//es//',a,a,a,'//es//',a,i0,a)') &
+      write(log_file,'(a,'//es//',a,a,a,'//es//',a,i0,a)') &
       & 'Acheved a value of ', sd_tol_current,' for signed distance norm &
       &approximation and', nl, 'relative tolerance of ', rel_tol, ' in ', i, &
       & ' iterations.'
     end if
-    call t_complete%write_elapsed_time(stdout,'Reinitalization finished, &
+    call t_complete%write_elapsed_time(log_file,'Reinitalization finished, &
     &elapsed time')
     ! Copy
     call sdf_inout%copy(sdf,esta,emsg); if ( esta /= 0 ) return
     ! Clean
-    call linear_system%solve(job=3,a=c_mtx,esta=esta,emsg=emsg)
-    if ( esta /= 0 ) return
+    if ( .not. iter_sol ) then
+      call linear_system%solve_dir(job=3,a=c_mtx,esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
+    end if
     call c_mtx%delete(esta,emsg); if ( esta /= 0 ) return
     call r_vec%delete(esta,emsg); if ( esta /= 0 ) return
-    call sdf%delete(esta,emsg); if ( esta /= 0 ) return
+    sdf => null()
     call sdf_0%delete(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
@@ -462,9 +485,9 @@ contains
     !
     integer(int64) :: storage
     !
-    write(stdout,'(a)') '*** Reinitalization statistics ***'
+    write(log_file,'(a)') '*** Reinitalization statistics ***'
     storage = mem_fac_c_mtx
-    write(stdout,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
+    write(log_file,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
     &storage))
     !
   end subroutine reinitalization_statistics

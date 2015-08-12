@@ -1,6 +1,6 @@
 module mesh_data
 !*****************************************************************************80
-  use types, only: ik, rk, stdout, es, int64
+  use types, only: ik, rk, stdout, es, int64, log_file
   use memory_storage, only: size_in_bytes, write_size_of_storage
   use point, only: dom, zero_pnt, point_3d_t
   use fe_c3d10, only: nelnod, c3d10_t, ngp, w
@@ -130,13 +130,13 @@ module mesh_data
     !
     integer(int64) :: storage
     !
-    write(stdout,'(a)') '*** Mesh data statistics ***'
-    write(stdout,'(a,i0)') 'Number of nodes is: ', nnod
-    write(stdout,'(a,i0)') 'Number of finite elements is: ', nfe
-    write(stdout,'(a,'//es//')') 'Characteristic finite element dimension &
+    write(log_file,'(a)') '*** Mesh data statistics ***'
+    write(log_file,'(a,i0)') 'Number of nodes is: ', nnod
+    write(log_file,'(a,i0)') 'Number of finite elements is: ', nfe
+    write(log_file,'(a,'//es//')') 'Characteristic finite element dimension &
     &is: ', char_fe_dim
     storage = size_in_bytes(nodes) + size_in_bytes(finite_elements)
-    write(stdout,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
+    write(log_file,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
     &storage))
     !
   end subroutine mesh_data_statistics

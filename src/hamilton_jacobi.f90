@@ -7,7 +7,7 @@ module hamilton_jacobi
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
   use point, only: dom
   use general_routines, only: size_mtx, outer, time
-  use mesh_data, only: nnod, nfe, finite_elements
+  use mesh_data, only: nnod, nfe, finite_elements, char_fe_dim
   use scalar_field, only: scalar_field_t
 !*****************************************************************************80
   implicit none
@@ -132,9 +132,11 @@ contains
     call m_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
     ! Factorize
-    call linear_system%solve(job=1,a=m_mtx,mem_used=mem_fac_c_mtx,&
-    &esta=esta,emsg=emsg)
-    if ( esta /= 0 ) return
+    if ( .not. iter_sol ) then
+      call linear_system%solve_dir(job=1,a=m_mtx,mem_used=mem_fac_c_mtx,&
+      &esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
+    end if
     ! Sucess
     esta = 0
     emsg = ''
