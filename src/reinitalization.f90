@@ -30,7 +30,7 @@ module reinitalzation
   ! written
   logical(lk) :: iter_sol = .false. ! Iterative solver
   integer(ik) :: iter_niter = 50 ! Number of iterations for iterative solver
-  real(rk) :: iter_tol = 1.0e-16_rk ! Tolerance
+  real(rk) :: iter_tol = 1.0e-8_rk ! Tolerance
 !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
   type(scalar_field_t), pointer :: sdf => null()
@@ -392,11 +392,10 @@ contains
       else
         call linear_system%solve_iter(a=c_mtx,b=r_vec%values,&
         &x=sdf%values,niter=iter_niter,tol=iter_tol,info=info,&
-        & esta=esta,emsg=emsg)
-        if ( esta /= 0 ) return
-        !if ( i == 1 .and. .not. write_iter_t ) then
+        & esta=esta,emsg=emsg); if ( esta /= 0 ) return
+        if ( i == 1 .and. .not. write_iter_t ) then
           write(log_file,'(a)') trim(info)
-        !end if
+        end if
       end if
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
