@@ -83,7 +83,7 @@ ifeq ($(FC),gfortran)
   all: FLFLAGS = $(FLFLAGSGCC)
   debug: FCFLAGS += $(FCFLAGSGCC) -g -W -Wall -Wextra -fbounds-check -pedantic -std=f2008 -O0 -fbacktrace -ffpe-trap=zero,overflow,underflow -fmax-errors=1 -Wfatal-errors -D_DEBUG
   debug: FLFLAGS = $(FLFLAGSGCC)
-  opt: FCFLAGS += $(FCFLAGSGCC) -O3 -march=native -ffast-math -funroll-loops 
+  opt: FCFLAGS += $(FCFLAGSGCC) -O3 -march=native -ffast-math -funroll-loops
   opt: FLFLAGS = $(FLFLAGSGCC)
   # c++
   all: CCFLAGS = $(CCFLAGSGCC)

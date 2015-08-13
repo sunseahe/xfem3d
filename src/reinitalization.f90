@@ -30,7 +30,7 @@ module reinitalzation
   ! written
   logical(lk) :: iter_sol = .false. ! Iterative solver
   integer(ik) :: iter_niter = 50 ! Number of iterations for iterative solver
-  real(rk) :: iter_tol = 1.0e-8_rk ! Tolerance
+  real(rk) :: iter_tol = 1.0e-16_rk ! Tolerance
 !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
   type(scalar_field_t), pointer :: sdf => null()
@@ -309,13 +309,12 @@ contains
     sdf_tol = 0.0e0_rk
     !$omp parallel do schedule(static,1)     &
     !$omp private(e,fe_sdf_tol) &
-    !$omp shared(finite_elements,esta,emsg)
+    !$omp shared(finite_elements,esta,emsg) &
+    !$omp reduction(+:sdf_tol)
     do e = 1, nfe
       call calc_fe_sdf_tol(finite_elements(e),&
       &fe_sdf_tol,esta,emsg)
-      !$omp critical
       sdf_tol = sdf_tol + fe_sdf_tol
-      !$omp end critical
     end do
     !$omp end parallel do
     sdf_tol = sqrt( sdf_tol )
