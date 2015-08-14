@@ -245,24 +245,28 @@ contains
     !
     integer(ik) :: e
     real(rk) :: fe_r_vec(nelnod)
+    type(time) :: t
     ! Reset the right hand side vector
+    call t%start_timer()
     call r_vec%set(esta=esta,emsg=emsg)
     if ( esta /= 0 ) return
     !
-    !$omp parallel do schedule(static,1) &
+    !$omp parallel do & !schedule(static,1)
     !$omp private(e,fe_r_vec) &
     !$omp shared(finite_elements,esta,emsg)
     do e = 1, nfe
-      if ( esta == 0 ) then
+      !if ( esta == 0 ) then
         call calc_fe_r_vec(finite_elements(e),fe_r_vec,esta,emsg)
-        !$omp critical
-        call r_vec%assemble_element_nodal_values(finite_elements(e),&
-        &fe_r_vec,esta,emsg)
-        !$omp end critical
-      end if
+        !!!$omp critical
+        !!!call r_vec%assemble_element_nodal_values(finite_elements(e),&
+        !!!&fe_r_vec,esta,emsg)
+        !!!$omp end critical
+      !end if
     end do
     !$omp end parallel do
     if ( esta /= 0 ) return
+    call t%write_elapsed_time(stdout)
+    stop 'test'
     ! Sucess
     esta = 0
     emsg = ''
@@ -392,9 +396,9 @@ contains
         call linear_system%solve_iter(a=c_mtx,b=r_vec%values,&
         &x=sdf%values,niter=iter_niter,tol=iter_tol,info=info,&
         & esta=esta,emsg=emsg); if ( esta /= 0 ) return
-        if ( i == 1 .and. .not. write_iter_t ) then
+        !if ( i == 1 .and. .not. write_iter_t ) then
           write(log_file,'(a)') trim(info)
-        end if
+        !end if
       end if
       ! Check for convergence
       call calc_sdf_tol(sd_tol_current,esta,emsg)
