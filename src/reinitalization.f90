@@ -29,8 +29,8 @@ module reinitalzation
   ! written
 !*****************************************************************************80
   logical(lk) :: iter_sol = .false. ! Iterative solver
-  integer(ik) :: iter_niter = 50 ! Number of iterations for iterative solver
-  real(rk) :: iter_tol = 1.0e-16_rk ! Tolerance
+  integer(ik) :: iter_niter = 200 ! Number of iterations for iterative solver
+  real(rk) :: iter_tol = 1.0e-8_rk ! Tolerance
 !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
   type(scalar_field_t), pointer :: sdf => null()
