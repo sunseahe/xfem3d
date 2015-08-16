@@ -2,7 +2,7 @@ include 'mkl_pardiso.f90'
 module sparse
 !*****************************************************************************80
   use blas95, only: dot
-  use iso_fortran_env, only: sp => real32, dp => real64, int64
+  use iso_fortran_env, only: sp => real32, dp => real64
   use types, only: ik, rk, lk, cl, eps, debug, es, nl
   use general_routines, only: resize_vec, time, pnorm
   use mkl_pardiso, only: mkl_pardiso_handle, pardiso
@@ -351,13 +351,12 @@ contains
 !*****************************************************************************80
 ! Direct solve routine
 !*****************************************************************************80
-  subroutine solve_direct_sls(self,job,a,b,x,mem_used,esta,emsg)
+  subroutine solve_direct_sls(self,job,a,b,x,esta,emsg)
     class(sparse_linear_system_t), intent(inout) :: self
     integer(ik), intent(in) :: job
     type(sparse_square_matrix_t), intent(inout) :: a
     real(rk), optional, intent(inout) :: b(:)
     real(rk), optional, intent(out) :: x(:)
-    integer(int64), optional, intent(out) :: mem_used
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
@@ -404,8 +403,6 @@ contains
         emsg = trim(emsg) // ' - in job analyze and factorize'
         return
       end if
-      if ( present(mem_used) ) mem_used = int(self%iparm(15)*1000,&
-      & kind=int64)
 !*****************************************************************************80
     case ( 2 ) ! Solve
       if ( .not. present(x) .or. .not. present(b) ) then

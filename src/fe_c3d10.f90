@@ -51,10 +51,8 @@ module fe_c3d10
     integer(ik) :: connectivity(nelnod) = 0
   contains
     procedure :: write => write_c3d10
-    procedure :: get_node_coo => get_node_coo_c3d10
-    procedure, nopass :: n_mtx => n_mtx_c3d10
-    procedure, nopass :: dn_dxi_mtx => dn_dxi_mtx_c3d10
-    procedure :: gradient => gradient_c3d10
+    procedure :: get_node_coo
+    procedure :: main_values
   end type c3d10_t
 !*****************************************************************************80
   type, extends(list) :: c3d10_t_ll
@@ -81,7 +79,7 @@ contains
     !
   end subroutine write_c3d10
 !*****************************************************************************80
-  pure function get_node_coo_c3d10(self,n) result(coo)
+  pure function get_node_coo(self,n) result(coo)
     class(c3d10_t), intent(in) :: self
     integer(ik), intent(in) :: n
     real(rk) :: coo(dom)
@@ -92,58 +90,16 @@ contains
     end if
     coo = self%nodes(n)%x
     !
-  end function get_node_coo_c3d10
+  end function get_node_coo
 !*****************************************************************************80
-! N matrix c3d10
+! N matrix values
 !*****************************************************************************80
-  pure subroutine n_mtx_c3d10(gp_num,xi_coo_pnt,n_mtx,esta,emsg)
-    integer(ik), optional, intent(in) :: gp_num
-    type(point_3d_t), optional, intent(in) :: xi_coo_pnt
+  pure subroutine n_values(xi,n_mtx)
+    real(rk), intent(in) :: xi(:)
     real(rk), intent(out) :: n_mtx(:)
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
     !
-    integer(ik) :: i
-    real(rk) :: xi(dom), lambda
-    logical(lk) :: gp_num_p, xi_coo_p
+    real(rk) :: lambda
     !
-    gp_num_p = present(gp_num); xi_coo_p = present(xi_coo_pnt)
-    if ( debug ) then
-      if ( .not. exclude(gp_num_p,xi_coo_p) ) then
-        esta = -1
-        emsg ='N matrix scalar tet: Gauss points and xi coordinates must&
-        & be excluded'
-        return
-      end if
-      if ( .not. size(n_mtx)==nelnod ) then
-        esta = -1
-        emsg ='N matrix scalar tet: N matrix size incorrect'
-        return
-      end if
-    end if
-    ! Set xi value
-    if( gp_num_p ) then
-      if ( debug ) then
-        if( gp_num > ngp ) then
-          esta = -1
-          emsg ='N matrix scalar tet: max five Gauss points'
-          return
-        end if
-      end if
-      xi = gp(gp_num,1:dom)
-    else if( xi_coo_p ) then
-      if ( debug ) then
-        do i = 1, dom
-          if ( .not. real_interval(0.0e0_rk,1.0e0_rk,xi_coo_pnt%x(i))) then
-            esta = -1
-            emsg ='N matrix scalar tet: xi coo vector component number '&
-            & // trim(i2str(i)) // ' out of bounds'
-            return
-          end if
-        end do
-      end if
-      xi = xi_coo_pnt%x
-    end if
     lambda = 1.0_rk - xi(1) - xi(2) - xi(3)
     n_mtx(1) = lambda * ( 2.0_rk * lambda - 1.0_rk )
     n_mtx(2) = xi(1) * ( 2.0_rk * xi(1) - 1.0_rk )
@@ -155,63 +111,16 @@ contains
     n_mtx(8) = 4.0_rk * xi(3) * lambda
     n_mtx(9) = 4.0_rk * xi(1) * xi(3)
     n_mtx(10) = 4.0_rk * xi(2) * xi(3)
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
-  end subroutine n_mtx_c3d10
+  end subroutine n_values
 !*****************************************************************************80
-! dN dXi matrix c3d10
+! dN dXi matrix values
 !*****************************************************************************80
-  pure subroutine dn_dxi_mtx_c3d10(gp_num,xi_coo_pnt,dn_dxi_mtx,esta,&
-  &emsg)
-    integer(ik), optional, intent(in) :: gp_num
-    type(point_3d_t), optional, intent(in) :: xi_coo_pnt
+  pure subroutine dn_dxi_mtx_values(xi,dn_dxi_mtx)
+    real(rk), intent(in) :: xi(:)
     real(rk), intent(out) :: dn_dxi_mtx(:,:)
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
     !
-    integer(ik) :: i
-    real(rk) :: xi(dom), lambda
-    logical(lk) :: gp_num_p, xi_coo_p
-    !
-    gp_num_p = present(gp_num); xi_coo_p = present(xi_coo_pnt)
-    if ( debug ) then
-      if ( .not. exclude(gp_num_p,xi_coo_p) ) then
-        esta = -1
-        emsg ='dN dXi matrix tet: Gauss points and xi coordinates must&
-        & be excluded'
-        return
-      end if
-      if ( .not.size_mtx(dn_dxi_mtx,dom,nelnod) ) then
-        esta = -1
-        emsg ='dN dXi matrix tet: matrix size incorrect'
-        return
-      end if
-    end if
-    ! Set xi value
-    if( gp_num_p ) then
-      if ( debug ) then
-        if( gp_num > ngp ) then
-          esta = -1
-          emsg ='dN dXi matrix tet: max five Gauss points'
-          return
-        end if
-      end if
-      xi = gp(gp_num,1:dom)
-    else if( xi_coo_p ) then
-      if ( debug ) then
-        do i = 1, dom
-          if ( .not. real_interval(0.0e0_rk,1.0e0_rk,xi_coo_pnt%x(i))) then
-            esta = -1
-            emsg ='dN dXi matrix tet: xi coo vector component number '&
-            & // trim(i2str(i)) // ' out of bounds'
-            return
-          end if
-        end do
-      end if
-      xi = xi_coo_pnt%x
-    end if
+    real(rk) :: lambda
     !
     dn_dxi_mtx = 0.0_rk
     lambda = 1.0_rk - xi(1) - xi(2) - xi(3)
@@ -246,79 +155,26 @@ contains
     !
     dn_dxi_mtx(2,10) = 4.0_rk*xi(3)
     dn_dxi_mtx(3,10) = 4.0_rk*xi(2)
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
-  end subroutine dn_dxi_mtx_c3d10
+  end subroutine dn_dxi_mtx_values
 !*****************************************************************************80
 ! Jacobian matrix c3d10
 !*****************************************************************************80
-  pure subroutine gradient_c3d10(self,gp_num,xi_coo_pnt,jac_mtx,det_jac &
-  &,inv_jac_mtx,b_mtx,esta,emsg)
-    class(c3d10_t), intent(in) :: self
-    integer(ik), optional, intent(in) :: gp_num
-    type(point_3d_t), optional, intent(in) :: xi_coo_pnt
-    real(rk), optional, intent(out) :: jac_mtx(:,:)
-    real(rk), optional, intent(out) :: det_jac
-    real(rk), optional, intent(out) :: inv_jac_mtx(:,:)
-    real(rk), optional, intent(out) :: b_mtx(:,:)
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
+  pure subroutine calc_det_jac(j,det_jac)
+    real(rk), intent(in) :: j(:,:)
+    real(rk), intent(out) :: det_jac
     !
-    integer(ik) :: i
-    real(rk) :: dn_dxi_mtx(dom,nelnod), el_coo(nelnod,dom)
-    real(rk) :: jac_mtx_int(dom,dom), det_jac_int, inv_jac_mtx_int(dom,dom)
-    ! Checks
-    if ( debug ) then
-      if ( present(jac_mtx) ) then
-        if ( .not.size_mtx(jac_mtx,dom,dom) ) then
-          esta = -1
-          emsg ='Jacobian: matrix jac_mtx size incorrect'
-          return
-        end if
-      end if
-      if ( present(inv_jac_mtx) ) then
-        if ( .not.size_mtx(inv_jac_mtx,dom,dom) ) then
-          esta = -1
-          emsg ='Jacobian: matrix inv_jac_mtx size incorrect'
-          return
-        end if
-      end if
-      if ( present(b_mtx) ) then
-        if ( .not.size_mtx(b_mtx,dom,nelnod) ) then
-          esta = -1
-          emsg ='B matrix size incorrect'
-          return
-        end if
-      end if
-    end if
-    ! Jacobian matrix
-    call self%dn_dxi_mtx(gp_num=gp_num,xi_coo_pnt=xi_coo_pnt,&
-    &dn_dxi_mtx=dn_dxi_mtx,esta=esta,emsg=emsg)
-    if( esta /= 0 ) return
-    do i = 1, nelnod
-      el_coo(i,1:dom) = self%nodes(i)%x(1:dom)
-    end do
-    call gemm(dn_dxi_mtx,el_coo,jac_mtx_int)
-    if ( present(jac_mtx) ) jac_mtx = jac_mtx_int
-    ! Jacobian determinant
-    associate( j => jac_mtx_int )
-    det_jac_int = - j(1,3)*j(2,2)*j(3,1) + j(1,2)*j(2,3)*j(3,1) &
-    &             + j(1,3)*j(2,1)*j(3,2) - j(1,1)*j(2,3)*j(3,2) &
-    &             - j(1,2)*j(2,1)*j(3,3) + j(1,1)*j(2,2)*j(3,3)
-    end associate
-    if ( debug ) then
-      if ( det_jac_int <= 0.0_rk ) then
-        esta = -1
-        emsg = 'Jacobian: determinant is zero'
-        return
-      end if
-    end if
-    if ( present(det_jac) ) det_jac = det_jac_int
-    ! Jacobian inverse
-    associate( j => jac_mtx_int )
-    inv_jac_mtx_int = ( 1.0_rk / det_jac_int ) * reshape( [ &
+    det_jac = - j(1,3)*j(2,2)*j(3,1) + j(1,2)*j(2,3)*j(3,1) &
+    &         + j(1,3)*j(2,1)*j(3,2) - j(1,1)*j(2,3)*j(3,2) &
+    &         - j(1,2)*j(2,1)*j(3,3) + j(1,1)*j(2,2)*j(3,3)
+    !
+  end subroutine calc_det_jac
+  pure subroutine calc_inv_jac_mtx(j,det_jac,inv_jac_mtx)
+    real(rk), intent(in) :: j(:,:)
+    real(rk), intent(in) :: det_jac
+    real(rk), intent(out) :: inv_jac_mtx(:,:)
+    !
+    inv_jac_mtx = ( 1.0_rk / det_jac ) * reshape( [ &
     & - j(2,3) * j(3,2) + j(2,2) * j(3,3),     &
     & + j(1,3) * j(3,2) - j(1,2) * j(3,3),     &
     & - j(1,3) * j(2,2) + j(1,2) * j(2,3),     &
@@ -329,14 +185,59 @@ contains
     & + j(1,2) * j(3,1) - j(1,1) * j(3,2),     &
     & - j(1,2) * j(2,1) + j(1,1) * j(2,2)      &
     & ], shape=[3,3],order=[2,1] )
-    end associate
-    if ( present(inv_jac_mtx) ) inv_jac_mtx = inv_jac_mtx_int
     !
-    if ( present(b_mtx) ) call gemm(inv_jac_mtx_int,dn_dxi_mtx,b_mtx)
-    ! Sucess
-    esta = 0
-    emsg = ''
-  end subroutine gradient_c3d10
+  end subroutine calc_inv_jac_mtx
+  pure subroutine main_values(self,gp_num,xi_coo_pnt,n_mtx,jac_mtx,det_jac &
+  &,inv_jac_mtx,b_mtx)
+    class(c3d10_t), intent(in) :: self
+    integer(ik), optional, intent(in) :: gp_num
+    type(point_3d_t), optional,  intent(in) :: xi_coo_pnt
+    real(rk), optional, intent(out) :: n_mtx(:)
+    real(rk), optional, intent(out) :: jac_mtx(:,:)
+    real(rk), optional, intent(out) :: det_jac
+    real(rk), optional, intent(out) :: inv_jac_mtx(:,:)
+    real(rk), optional, intent(out) :: b_mtx(:,:)
+    !
+    integer(ik) :: i
+    real(rk) :: xi(dom)
+    real(rk) :: dn_dxi_mtx(dom,nelnod), el_coo(nelnod,dom)
+    real(rk) :: jac_mtx_int(dom,dom), det_jac_int, inv_jac_mtx_int(dom,dom)
+    logical(lk) :: a1, a2, a3, a4, a5
+    !
+    a1 = present(n_mtx); a2 = present(jac_mtx)
+    a3 = present(det_jac); a4 = present(inv_jac_mtx)
+    a5 = present(b_mtx)
+    !
+    if ( present(gp_num) ) then
+      xi = gp(gp_num,1:dom)
+    else if (present (xi_coo_pnt) ) then
+      xi = xi_coo_pnt%x
+    else
+      return
+    end if
+    ! N matrix
+    if ( a1 ) call n_values(xi,n_mtx)
+    if ( .not.a2 .and. .not.a3 .and. &
+    &    .not.a4 .and. .not.a5  ) return
+    ! Jacobian matrix
+    call dn_dxi_mtx_values(xi,dn_dxi_mtx)
+    do i = 1, nelnod
+      el_coo(i,1:dom) = self%nodes(i)%x(1:dom)
+    end do
+    call gemm(dn_dxi_mtx,el_coo,jac_mtx_int)
+    if ( a2 ) jac_mtx = jac_mtx_int
+    ! Jacobian determinant
+    call calc_det_jac(jac_mtx_int,det_jac_int)
+    if ( a3 ) det_jac = det_jac_int
+    if ( .not.a4 .and. .not.a5 ) return
+    ! Jacobian inverse
+    call calc_inv_jac_mtx(jac_mtx_int,det_jac_int,inv_jac_mtx_int)
+    if ( a4 ) inv_jac_mtx = inv_jac_mtx_int
+    if ( .not. a5 ) return
+    ! B matrix
+    if ( a5 ) call gemm(inv_jac_mtx_int,dn_dxi_mtx,b_mtx)
+    !
+  end subroutine main_values
 !*****************************************************************************80
   pure subroutine add_c3d10_t_ll(self,arg,esta,emsg)
     class(c3d10_t_ll), intent(inout) :: self

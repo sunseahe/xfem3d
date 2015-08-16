@@ -1,10 +1,9 @@
 module reinitalzation
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
-  use types, only: ik, int64, rk, lk, es, debug, stdout, nl, log_file, cl
+  use types, only: ik, rk, lk, es, debug, stdout, nl, log_file, cl
   use general_routines, only: size_mtx, outer, pnorm, time, &
   &write_dense_mtx_real
-  use memory_storage, only: size_in_bytes, write_size_of_storage
   use point, only: dom
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
   use mesh_data, only: nnod, nfe, char_fe_dim, finite_elements
@@ -28,6 +27,7 @@ module reinitalzation
   logical(lk) :: write_par = .false. ! Write parameters to log file
   logical(lk) :: write_iter_t = .false. ! Reinitalization iteration time
   ! written
+!*****************************************************************************80
   logical(lk) :: iter_sol = .false. ! Iterative solver
   integer(ik) :: iter_niter = 50 ! Number of iterations for iterative solver
   real(rk) :: iter_tol = 1.0e-16_rk ! Tolerance
@@ -39,10 +39,8 @@ module reinitalzation
   type(sparse_square_matrix_t), save :: c_mtx
   type(sparse_linear_system_t), save :: linear_system
 !*****************************************************************************80
-  integer(int64) :: mem_fac_c_mtx = 0
-!*****************************************************************************80
   public :: set_reinitalization, configured, calculate_reinitalization, &
-  & reinitalization_statistics, reg_pnorm
+  & reg_pnorm
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -69,49 +67,31 @@ contains
 !*****************************************************************************80
 ! C matrix fe
 !*****************************************************************************80
-  pure subroutine calc_fe_c_mtx(c3d10,c_mtx,esta,emsg)
+  pure subroutine calc_fe_c_mtx(c3d10,c_mtx)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: c_mtx(:,:)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p, p_tmp
+    integer(ik) :: p
     real(rk) :: det_jac, sdf_0_gp, sdf_0_nv(nelnod)
     real(rk) :: rtmp1(nelnod,nelnod), rtmp2(nelnod,nelnod)
     real(rk) :: m_gam_mtx(nelnod,nelnod)
     real(rk) :: n(nelnod), b(dom,nelnod)
-    ! Checks
-    if ( debug ) then
-      if ( .not.size_mtx(c_mtx,nelnod,nelnod) ) then
-        esta = -1
-        emsg ='Cal fe c mtx: El cmtx size incorrect'
-        return
-      end if
-    end if
     !
     c_mtx = 0.0_rk
     do p = 1, ngp
-      p_tmp = p ! Gfortran bug
-      ! Set main values
-      call c3d10%n_mtx(gp_num=p_tmp,n_mtx=n,esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
-      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
-      &esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
+      ! Get main values
+      call c3d10%main_values(gp_num=p,n_mtx=n,b_mtx=b,det_jac=det_jac)
       !
       call outer(n,n,rtmp1)
       call gemm(transpose(b),b,rtmp2)
       ! M gamma
-      call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv,esta,emsg)
+      call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv)
       sdf_0_gp = dot(n,sdf_0_nv)
       m_gam_mtx = rtmp1 * dirac_delta(sdf_0_gp)
       ! integrate
       c_mtx = c_mtx + ( rtmp1 + d_t * er * rtmp2 +  &
       & rho * m_gam_mtx )* w(p) * det_jac
     end do
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine calc_fe_c_mtx
 !*****************************************************************************80
@@ -133,36 +113,32 @@ contains
     indx = 1
     !$omp parallel do schedule(static,1) &
     !$omp private(e,fe_c_mtx) &
-    !$omp shared(finite_elements,esta,emsg)
+    !$omp shared(finite_elements)
     do e = 1, nfe
-      if ( esta == 0 ) then
-        call calc_fe_c_mtx(finite_elements(e),fe_c_mtx,esta,emsg)
-        !$omp critical
-        ! Add to sparse matrix
-        do i = 1, nelnod
-          do j = 1, nelnod
-            ! symmetric matrix only upper part
-            if ( finite_elements(e)%connectivity(i) <= &
-            & finite_elements(e)%connectivity(j) ) then
-              crow(indx) = finite_elements(e)%connectivity(i)
-              ccol(indx) = finite_elements(e)%connectivity(j)
-              cx(indx) = fe_c_mtx(i,j)
-              indx = indx + 1
-            end if
-          end do
+      call calc_fe_c_mtx(finite_elements(e),fe_c_mtx)
+      !$omp critical
+      ! Add to sparse matrix
+      do i = 1, nelnod
+        do j = 1, nelnod
+          ! symmetric matrix only upper part
+          if ( finite_elements(e)%connectivity(i) <= &
+          & finite_elements(e)%connectivity(j) ) then
+            crow(indx) = finite_elements(e)%connectivity(i)
+            ccol(indx) = finite_elements(e)%connectivity(j)
+            cx(indx) = fe_c_mtx(i,j)
+            indx = indx + 1
+          end if
         end do
-        !$omp end critical
-      end if
+      end do
+      !$omp end critical
     end do
     !$omp end parallel do
-    if ( esta /= 0 ) return
     ! Allocate sparse matrix
     call c_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
     ! Factorize if direct solution
     if ( .not. iter_sol ) then
-      call linear_system%solve_dir(job=1,a=c_mtx,mem_used=mem_fac_c_mtx,&
-      &esta=esta,emsg=emsg)
+      call linear_system%solve_dir(job=1,a=c_mtx,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
     end if
     ! Sucess
@@ -173,13 +149,11 @@ contains
 !*****************************************************************************80
 ! R vector fe
 !*****************************************************************************80
-  pure subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
+  pure subroutine calc_fe_r_vec(c3d10,r_vec)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: r_vec(:)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p, p_tmp
+    integer(ik) :: p
     real(rk) :: beta1
     real(rk) :: det_jac
     real(rk) :: n(nelnod), b(dom,nelnod), inv_jac_mtx(dom,dom)
@@ -190,27 +164,13 @@ contains
     real(rk) :: rtmp1(dom), rtmp2(nelnod)
     real(rk) :: r1(nelnod), r2(nelnod), r3(nelnod)
     !
-    if ( debug ) then
-      if ( .not.size(r_vec)==nelnod ) then
-        esta = -1
-        emsg ='Cal fe r vec: r vec size incorrect'
-        return
-      end if
-    end if
-    !
     r1 = 0.0e0_rk; r2 = 0.0e0_rk; r3 = 0.0e0_rk
     do p = 1, ngp
-      p_tmp = p ! Gfortran bug
-      ! Set main values
-      call c3d10%n_mtx(gp_num=p_tmp,n_mtx=n,esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
-      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
-      &inv_jac_mtx=inv_jac_mtx,esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
-      call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv,esta,emsg)
-      if ( esta /= 0 ) return
-      call sdf%get_element_nodal_values(c3d10,sdf_nv,esta,emsg)
-      if ( esta /= 0 ) return
+      ! Get main values
+      call c3d10%main_values(gp_num=p,n_mtx=n,b_mtx=b,det_jac=det_jac,&
+      &inv_jac_mtx=inv_jac_mtx)
+      call sdf_0%get_element_nodal_values(c3d10,sdf_0_nv)
+      call sdf%get_element_nodal_values(c3d10,sdf_nv)
       !
       sdf_0_gp = dot(n,sdf_0_nv)
       sdf_gp = dot(n,sdf_nv)
@@ -231,9 +191,6 @@ contains
       !
     end do
     r_vec = d_t * (r1 - r2) + r3
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine calc_fe_r_vec
 !*****************************************************************************80
@@ -251,61 +208,47 @@ contains
     call r_vec%set(esta=esta,emsg=emsg)
     if ( esta /= 0 ) return
     !
+    !print*, 'here'
     !$omp parallel do & !schedule(static,1)
     !$omp private(e,fe_r_vec) &
-    !$omp shared(finite_elements,esta,emsg)
+    !$omp shared(finite_elements)
     do e = 1, nfe
-      !if ( esta == 0 ) then
-        call calc_fe_r_vec(finite_elements(e),fe_r_vec,esta,emsg)
-        !!!$omp critical
-        !!!call r_vec%assemble_element_nodal_values(finite_elements(e),&
-        !!!&fe_r_vec,esta,emsg)
-        !!!$omp end critical
-      !end if
+      call calc_fe_r_vec(finite_elements(e),fe_r_vec)
+      !$omp critical
+      call r_vec%assemble_element_nodal_values(finite_elements(e),&
+      &fe_r_vec)
+      !$omp end critical
     end do
     !$omp end parallel do
-    if ( esta /= 0 ) return
-    call t%write_elapsed_time(stdout)
-    stop 'test'
-    ! Sucess
-    esta = 0
-    emsg = ''
+    !call t%write_elapsed_time(stdout)
+    !stop 'test'
     !
   end subroutine r_vec_setup
 !*****************************************************************************80
 ! Calculate signed distance tolerance
 !*****************************************************************************80
-  pure subroutine calc_fe_sdf_tol(c3d10,sdf_tol,esta,emsg)
+  pure subroutine calc_fe_sdf_tol(c3d10,sdf_tol)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: sdf_tol
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p, p_tmp
+    integer(ik) :: p
     real(rk) :: det_jac
     real(rk) :: sdf_nv(nelnod), grad_sdf(dom)
     real(rk) :: b(dom,nelnod)
     !
     sdf_tol = 0.0e0_rk
     do p = 1, ngp
-      p_tmp = p
-      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
-      &esta=esta,emsg=emsg)
-      call sdf%get_element_nodal_values(c3d10,sdf_nv,esta,emsg)
+      call c3d10%main_values(gp_num=p,b_mtx=b,det_jac=det_jac)
+      call sdf%get_element_nodal_values(c3d10,sdf_nv)
       call gemv(b,sdf_nv,grad_sdf)
       sdf_tol = sdf_tol + (reg_pnorm(2,grad_sdf) - 1.0e0_rk)**2 &
       & * w(p) * det_jac
     end do
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine calc_fe_sdf_tol
 !*****************************************************************************80
-  subroutine calc_sdf_tol(sdf_tol,esta,emsg)
+  subroutine calc_sdf_tol(sdf_tol)
     real(rk), intent(out) :: sdf_tol
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
     !
     integer(ik) :: e
     real(rk) :: fe_sdf_tol
@@ -313,18 +256,14 @@ contains
     sdf_tol = 0.0e0_rk
     !$omp parallel do schedule(static,1)     &
     !$omp private(e,fe_sdf_tol) &
-    !$omp shared(finite_elements,esta,emsg) &
+    !$omp shared(finite_elements) &
     !$omp reduction(+:sdf_tol)
     do e = 1, nfe
-      call calc_fe_sdf_tol(finite_elements(e),&
-      &fe_sdf_tol,esta,emsg)
+      call calc_fe_sdf_tol(finite_elements(e),fe_sdf_tol)
       sdf_tol = sdf_tol + fe_sdf_tol
     end do
     !$omp end parallel do
     sdf_tol = sqrt( sdf_tol )
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine calc_sdf_tol
 !*****************************************************************************80
@@ -363,7 +302,7 @@ contains
       write(log_file,'(a,'//es//')') ' - stable time inc is: ', d_t
       write(log_file,'(a,'//es//')') ' - step corr par is: ', alpha
       write(log_file,'(a,'//es//')') ' - diffusion par is: ', c
-      write(log_file,'(a,'//es//')') ' - enforce dirchlet: ', rho
+      write(log_file,'(a,'//es//')') ' - enforce dirichlet: ', rho
       write(log_file,'(a,'//es//')') ' - solution tolerance: ', sign_dist_tol
       write_par = .true.
     end if
@@ -401,8 +340,7 @@ contains
         !end if
       end if
       ! Check for convergence
-      call calc_sdf_tol(sd_tol_current,esta,emsg)
-      if ( esta /= 0 ) return
+      call calc_sdf_tol(sd_tol_current)
       rel_tol = abs(sd_tol_current-sd_tol_previous) / sd_tol_current
       if( rel_tol <= sign_dist_tol ) then
         conv_iter = conv_iter + 1
@@ -436,8 +374,6 @@ contains
     end if
     call t_complete%write_elapsed_time(log_file,'Reinitalization finished, &
     &elapsed time')
-    ! Copy
-    call sdf_inout%copy(sdf,esta,emsg); if ( esta /= 0 ) return
     ! Clean
     if ( .not. iter_sol ) then
       call linear_system%solve_dir(job=3,a=c_mtx,esta=esta,emsg=emsg)
@@ -458,7 +394,7 @@ contains
   pure function dirac_delta(x) result(res)
     real(rk), intent(in) :: x
     real(rk) :: res
-    associate( delta => 2.0_rk * char_fe_dim )
+    associate( delta => char_fe_dim )
     if( abs(x) <= delta ) then
       res = 3.0_rk / 4.0_rk * delta * &
       & ( 1.0_rk - x**2 / delta**2 )
@@ -480,18 +416,5 @@ contains
     real(rk) :: res
     res = sqrt( pnorm(p,x)**2 + char_fe_dim**2 )
   end function reg_pnorm
-!*****************************************************************************80
-! Reinitalization statistics
-!*****************************************************************************80
-  subroutine reinitalization_statistics()
-    !
-    integer(int64) :: storage
-    !
-    write(log_file,'(a)') '*** Reinitalization statistics ***'
-    storage = mem_fac_c_mtx
-    write(log_file,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
-    &storage))
-    !
-  end subroutine reinitalization_statistics
 !*****************************************************************************80
 end module reinitalzation

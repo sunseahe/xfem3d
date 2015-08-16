@@ -1,16 +1,16 @@
 module volume_integral
+  use blas95, only: dot
   use types, only: ik, rk, lk, cl, stdout, log_file
   use point, only: dom, point_3d_t
-  use fe_c3d10, only:  nelnod, c3d10_t
-  use mesh_data, only: nnod, nodes, nfe, finite_elements
+  use fe_c3d10, only:  nelnod, c3d10_t, ngp, w
+  use mesh_data, only: nnod, nodes, nfe, finite_elements, char_fe_dim
   use scalar_field, only: scalar_field_t
   !use xtet, only: set_sub_xtets
   use lsf_test_functions
   use write_odb, only: write_model_data, create_step, create_frame,  &
   &  write_scalar_field, close_odb_file
   use read_input, only: input_file_name
-  use reinitalzation, only: calculate_reinitalization, r_conf => configured, &
-  & reinitalization_statistics
+  use reinitalzation, only: calculate_reinitalization, r_conf => configured
 !*****************************************************************************80
   implicit none
   private
@@ -50,10 +50,10 @@ contains
     !if ( esta /= 0 ) return
     !call write_ind_fun('Torus',3,3.0_rk,s_2,esta,emsg)
     !if ( esta /= 0 ) return
-    !call write_ind_fun('Genus two',4,4.0_rk,s_3,esta,emsg)
-    !if ( esta /= 0 ) return
-    call write_ind_fun('Genus seven',1,1.0_rk,s_4,esta,emsg)
+    call write_ind_fun('Genus two',1,1.0_rk,s_3,esta,emsg)
     if ( esta /= 0 ) return
+    !call write_ind_fun('Genus seven',1,1.0_rk,s_4,esta,emsg)
+    !if ( esta /= 0 ) return
     ! Close odb file
     call close_odb_file(esta,emsg)
     if( esta /= 0 ) return
@@ -72,6 +72,8 @@ contains
       integer(ik), intent(out) :: esta
       character(len=*), intent(out) :: emsg
       !
+      real(rk) :: volume
+      !
       call create_frame(step,name,frame_num,time,&
       &esta,emsg)
       if ( esta /= 0 ) return
@@ -85,16 +87,20 @@ contains
           active_node = finite_elements(e)%connectivity(i)
           if ( lsf_field_val_cal(active_node) ) cycle element_nodes
           lsf_field_val_cal(active_node) = .true.
-          call lsf%set_nodal_value(active_node,test_fun(x),esta,emsg)
-          if ( esta /= 0 ) return
+          call lsf%set_nodal_value(active_node,test_fun(x))
         end do element_nodes
       end do elements
+      ! Calculate volume
+      call calc_vol_heaviside(lsf,volume)
+      print*, 'Volume before reinitalization =', volume
       ! Reinitalize function
       if ( r_conf ) then
         call calculate_reinitalization(lsf,esta,emsg)
         if ( esta /= 0 ) return
-        call reinitalization_statistics()
       end if
+      ! Calculate volume
+      call calc_vol_heaviside(lsf,volume)
+      print*, 'Volume after reinitalization =', volume
       ! Write field
       call write_scalar_field(step,frame_num,field_name,&
       & field_description,lsf%values,.true.,esta,emsg)
@@ -104,6 +110,67 @@ contains
       emsg = ''
     end subroutine write_ind_fun
   end subroutine write_test_functions
+
+  pure function heaviside(x) result(res)
+    real(rk), intent(in) :: x
+    real(rk) :: res
+    !
+    real(rk), parameter :: alpha = 1.0e-8_rk
+    !
+    associate ( delta => char_fe_dim )
+    if( x < -delta ) then
+      res = alpha
+    else if ( (-delta<= x).and.(x <= delta) ) then
+      res = 3.0_rk*(1.0_rk-alpha)/4.0_rk*(x/delta-x**3 &
+      & /(3.0_rk*delta**3)) + (1.0_rk+alpha)/2.0_rk
+    else
+      res = 1.0_rk
+    end if
+    end associate
+    !
+  end function heaviside
+
+  pure subroutine calc_vol_heaviside_fe(c3d10,lsf,volume_fe)
+    type(c3d10_t), intent(in) :: c3d10
+    type(scalar_field_t), intent(in) :: lsf
+    real(rk), intent(out) :: volume_fe
+    !
+    integer(ik) :: p
+    real(rk) :: n(nelnod)
+    real(rk) :: det_jac
+    real(rk) :: lsf_nv(nelnod), lsf_gp
+    !
+    volume_fe = 0.0e0_rk
+    do p = 1, ngp
+      call c3d10%main_values(gp_num=p,n_mtx=n,det_jac=det_jac)
+      call lsf%get_element_nodal_values(c3d10,lsf_nv)
+      lsf_gp = dot(n,lsf_nv)
+      volume_fe = volume_fe + heaviside(lsf_gp)  * w(p) * det_jac
+    end do
+    !
+  end subroutine calc_vol_heaviside_fe
+
+  subroutine calc_vol_heaviside(lsf,volume)
+    type(scalar_field_t), intent(in) :: lsf
+    real(rk), intent(out) :: volume
+    !
+    integer(ik) :: e
+    real(rk) :: volume_fe
+    !
+    volume = 0.0_rk
+    !$omp parallel do & !schedule(static,1)
+    !$omp private(e,volume_fe) &
+    !$omp shared(finite_elements,lsf)
+    do e = 1, nfe
+      call calc_vol_heaviside_fe(finite_elements(e),lsf,volume_fe)
+      !$omp critical
+      volume = volume + volume_fe
+      !$omp end critical
+    end do
+    !$omp end parallel do
+    !
+  end subroutine calc_vol_heaviside
+
 
 
 

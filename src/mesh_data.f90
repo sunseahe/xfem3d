@@ -1,7 +1,6 @@
 module mesh_data
 !*****************************************************************************80
-  use types, only: ik, rk, stdout, es, int64, log_file
-  use memory_storage, only: size_in_bytes, write_size_of_storage
+  use types, only: ik, rk, stdout, es, log_file
   use point, only: dom, zero_pnt, point_3d_t
   use fe_c3d10, only: nelnod, c3d10_t, ngp, w
 !*****************************************************************************80
@@ -60,46 +59,64 @@ module mesh_data
         finite_elements(i)%nodes(j) = nodes(el_conn(j))
       end do
     end do
-    ! Calculate minimal characteristic dimension
-    call min_char_fe_dim(esta,emsg)
+    ! Check if jacobian determinant is positive for all elements
+    call jac_det_check(esta,emsg)
     if ( esta /= 0 ) return
+    ! Calculate minimal characteristic dimension
+    call min_char_fe_dim()
     ! Sucess
     esta = 0
     emsg = ''
     !
   end subroutine set_finite_elements
 !*****************************************************************************80
-! Characteristic finite element dimension
+! Jacobian determinant check
 !*****************************************************************************80
-  pure subroutine calc_char_fe_dim(c3d10,le,esta,emsg)
-    type(c3d10_t), intent(in) :: c3d10
-    real(rk), intent(out) :: le
+  subroutine jac_det_check(esta,emsg)
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p, p_tmp
+    integer(ik) :: e
+    real(rk), parameter :: ot = 1.0_rk/3.0_rk
+    real(rk) :: det_jac
+    type(point_3d_t), parameter :: centroid = point_3d_t([ ot, ot, ot ])
+    !
+    check: do e = 1, nfe
+      call finite_elements(e)%main_values(xi_coo_pnt=centroid,&
+      &det_jac=det_jac)
+      if ( det_jac <= 0.0_rk ) then
+        esta = -1
+        write(emsg,'(a,i0)') 'Zero or negative determinant for finite &
+        &element no:', e
+        exit check
+      end if
+    end do check
+    esta = 0
+    emsg = ''
+    !
+  end subroutine jac_det_check
+!*****************************************************************************80
+! Characteristic finite element dimension
+!*****************************************************************************80
+  pure subroutine calc_char_fe_dim(c3d10,le)
+    type(c3d10_t), intent(in) :: c3d10
+    real(rk), intent(out) :: le
+    !
+    integer(ik) :: p
     real(rk) :: det_jac, vol
     !
     vol = 0.0_rk
     !
     do p = 1, ngp
-      p_tmp = p ! Gfortran bug
-      call c3d10%gradient(gp_num=p_tmp,det_jac=det_jac,&
-      &esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
+      call c3d10%main_values(gp_num=p,det_jac=det_jac)
       vol = vol + w(p) * det_jac
     end do
     !print*, vol
     !le = (12.0_rk * vol)**(1.0_rk/3.0_rk) / 2.0_rk
     le = vol**(1.0_rk/3.0_rk)
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine calc_char_fe_dim
-  subroutine min_char_fe_dim(esta,emsg)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
+  subroutine min_char_fe_dim()
     !
     integer(ik) :: e
     real(rk) :: le, le_sum
@@ -107,37 +124,27 @@ module mesh_data
     le_sum = 0.0_rk
     !$omp parallel do schedule(static,1) &
     !$omp private(e,le) &
-    !$omp shared(finite_elements,le_sum,esta,emsg)
+    !$omp shared(finite_elements,le_sum)
     do e = 1, nfe
-      if ( esta == 0 ) then
-        call calc_char_fe_dim(finite_elements(e),le,esta,emsg)
-      end if
+      call calc_char_fe_dim(finite_elements(e),le)
       !$omp critical
       le_sum = le_sum + le
       !$omp end critical
     end do
     !$omp end parallel do
-    if ( esta /= 0 ) return
     char_fe_dim = le_sum / nfe
-    ! Sucess
-    esta = 0
-    emsg = ''
+    !
   end subroutine min_char_fe_dim
 !*****************************************************************************80
 ! Read input statistics
 !*****************************************************************************80
   subroutine mesh_data_statistics()
     !
-    integer(int64) :: storage
-    !
     write(log_file,'(a)') '*** Mesh data statistics ***'
     write(log_file,'(a,i0)') 'Number of nodes is: ', nnod
     write(log_file,'(a,i0)') 'Number of finite elements is: ', nfe
     write(log_file,'(a,'//es//')') 'Characteristic finite element dimension &
     &is: ', char_fe_dim
-    storage = size_in_bytes(nodes) + size_in_bytes(finite_elements)
-    write(log_file,'(a,a)') 'Data allocated: ', trim(write_size_of_storage( &
-    &storage))
     !
   end subroutine mesh_data_statistics
 !*****************************************************************************80

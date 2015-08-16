@@ -1,7 +1,7 @@
 module hamilton_jacobi
 !*****************************************************************************80
   use blas95, only: dot, gemv, gemm
-  use types, only: ik, rk, lk, int64, debug, stdout
+  use types, only: ik, rk, lk, cl, debug, stdout, log_file
   use reinitalzation, only: reg_pnorm
   use sparse, only: sparse_square_matrix_t, sparse_linear_system_t
   use fe_c3d10, only: nelnod, ngp, c3d10_t, w
@@ -18,7 +18,12 @@ module hamilton_jacobi
   integer(ik) :: max_num_advect = 50 ! Maximal number of advection steps
   real(rk) :: max_alpha_t = 1.0_rk ! Maximal alpha correction
   real(rk) :: d_t = 0.0e0_rk ! Time step - to be calculated
+  logical(lk) :: write_iter_t = .false. ! Advection iteration time
+  ! written
+!*****************************************************************************80
   logical(lk) :: iter_sol = .false. ! Iterative solver
+  integer(ik) :: iter_niter = 50 ! Number of iterations for iterative solver
+  real(rk) :: iter_tol = 1.0e-16_rk ! Tolerance
 !*****************************************************************************80
   type(sparse_square_matrix_t), save :: m_mtx
   type(sparse_linear_system_t), save :: linear_system
@@ -26,8 +31,6 @@ module hamilton_jacobi
   type(scalar_field_t), pointer :: lsf
   type(scalar_field_t), pointer :: v
   type(scalar_field_t), save :: r_vec
-!*****************************************************************************80
-  integer(int64) :: mem_fac_c_mtx = 0
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -46,42 +49,23 @@ contains
 !*****************************************************************************80
 ! M matrix fe
 !*****************************************************************************80
-  pure subroutine calc_fe_m_mtx(c3d10,m_mtx,esta,emsg)
+  pure subroutine calc_fe_m_mtx(c3d10,m_mtx)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: m_mtx(:,:)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p, p_tmp
+    integer(ik) :: p
     real(rk) :: det_jac
     real(rk) :: rtmp1(nelnod,nelnod)
     real(rk) :: n(nelnod)
-    ! Checks
-    if ( debug ) then
-      if ( .not.size_mtx(m_mtx,nelnod,nelnod) ) then
-        esta = -1
-        emsg ='Cal fe m mtx: El mmtx size incorrect'
-        return
-      end if
-    end if
     !
     m_mtx = 0.0_rk
     do p = 1, ngp
-      p_tmp = p ! Gfortran bug
       ! Set main values
-      call c3d10%n_mtx(gp_num=p_tmp,n_mtx=n,esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
-      call c3d10%gradient(gp_num=p_tmp,det_jac=det_jac,&
-      &esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
-      !
+      call c3d10%main_values(gp_num=p,n_mtx=n,det_jac=det_jac)
       call outer(n,n,rtmp1)
       ! integrate
       m_mtx = m_mtx + rtmp1 * w(p) * det_jac
     end do
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine calc_fe_m_mtx
 !*****************************************************************************80
@@ -103,38 +87,32 @@ contains
     indx = 1
     !$omp parallel do schedule(static,1) &
     !$omp private(e,fe_m_mtx) &
-    !$omp shared(finite_elements,esta,emsg)
+    !$omp shared(finite_elements)
     do e = 1, nfe
-      if ( esta == 0 ) then
-        call calc_fe_m_mtx(finite_elements(e),fe_m_mtx,esta,emsg)
-        !$omp critical
-        ! Add to sparse matrix
-        !associate( c => finite_elements(e)%connectivity )
-        do i = 1, nelnod
-          do j = 1, nelnod
-            ! symmetric matrix only upper part
-            if ( finite_elements(e)%connectivity(i) <= &
-            & finite_elements(e)%connectivity(j) ) then
-              crow(indx) = finite_elements(e)%connectivity(i)
-              ccol(indx) = finite_elements(e)%connectivity(j)
-              cx(indx) = fe_m_mtx(i,j)
-              indx = indx + 1
-            end if
-          end do
+      call calc_fe_m_mtx(finite_elements(e),fe_m_mtx)
+      !$omp critical
+      ! Add to sparse matrix
+      do i = 1, nelnod
+        do j = 1, nelnod
+          ! symmetric matrix only upper part
+          if ( finite_elements(e)%connectivity(i) <= &
+          & finite_elements(e)%connectivity(j) ) then
+            crow(indx) = finite_elements(e)%connectivity(i)
+            ccol(indx) = finite_elements(e)%connectivity(j)
+            cx(indx) = fe_m_mtx(i,j)
+            indx = indx + 1
+          end if
         end do
-        !end associate
-        !$omp end critical
-      end if
+      end do
+      !$omp end critical
     end do
     !$omp end parallel do
-    if ( esta /= 0 ) return
     ! Allocate sparse matrix
     call m_mtx%set(nnod,crow,ccol,cx,esta,emsg)
     if ( esta /= 0 ) return
     ! Factorize
     if ( .not. iter_sol ) then
-      call linear_system%solve_dir(job=1,a=m_mtx,mem_used=mem_fac_c_mtx,&
-      &esta=esta,emsg=emsg)
+      call linear_system%solve_dir(job=1,a=m_mtx,esta=esta,emsg=emsg)
       if ( esta /= 0 ) return
     end if
     ! Sucess
@@ -145,13 +123,11 @@ contains
 !*****************************************************************************80
 ! R vector fe
 !*****************************************************************************80
-  pure subroutine calc_fe_r_vec(c3d10,r_vec,esta,emsg)
+  pure subroutine calc_fe_r_vec(c3d10,r_vec)
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: r_vec(:)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
     !
-    integer(ik) :: p, p_tmp
+    integer(ik) :: p
     real(rk) :: beta1, det_jac
     real(rk) :: n(nelnod), b(dom,nelnod), inv_jac_mtx(dom,dom)
     real(rk) :: v_n(dom)
@@ -159,27 +135,13 @@ contains
     real(rk) :: grad_lsf(dom), norm_lsf(dom)
     real(rk) :: rtmp1(dom), rtmp2(nelnod)
     !
-    if ( debug ) then
-      if ( .not.size(r_vec)==nelnod ) then
-        esta = -1
-        emsg ='Cal fe r vec: r vec size incorrect'
-        return
-      end if
-    end if
-    !
     r_vec = 0.0_rk
     do p = 1, ngp
-      p_tmp = p ! Gfortran bug
       ! Set main values
-      call c3d10%n_mtx(gp_num=p_tmp,n_mtx=n,esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
-      call c3d10%gradient(gp_num=p_tmp,b_mtx=b,det_jac=det_jac,&
-      &inv_jac_mtx=inv_jac_mtx,esta=esta,emsg=emsg)
-      if ( esta /= 0 ) return
-      call lsf%get_element_nodal_values(c3d10,lsf_nv,esta,emsg)
-      if ( esta /= 0 ) return
-      call v%get_element_nodal_values(c3d10,v_nv,esta,emsg)
-      if ( esta /= 0 ) return
+      call c3d10%main_values(gp_num=p,n_mtx=n,b_mtx=b,det_jac=det_jac,&
+      &inv_jac_mtx=inv_jac_mtx)
+      call lsf%get_element_nodal_values(c3d10,lsf_nv)
+      call v%get_element_nodal_values(c3d10,v_nv)
       !
       call gemv(b,lsf_nv,grad_lsf)
       norm_lsf = - grad_lsf / reg_pnorm(2,grad_lsf)
@@ -192,9 +154,6 @@ contains
       ! Integrate
       r_vec = r_vec - d_t * rtmp2 * w(p) * det_jac
     end do
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine calc_fe_r_vec
 !*****************************************************************************80
@@ -212,18 +171,15 @@ contains
     !
     !$omp parallel do schedule(static,1) &
     !$omp private(e,fe_r_vec) &
-    !$omp shared(finite_elements,esta,emsg)
+    !$omp shared(finite_elements)
     do e = 1, nfe
-      if ( esta == 0 ) then
-        call calc_fe_r_vec(finite_elements(e),fe_r_vec,esta,emsg)
-        !$omp critical
-        call r_vec%assemble_element_nodal_values(finite_elements(e),&
-        &fe_r_vec,esta,emsg)
-        !$omp end critical
-      end if
+      call calc_fe_r_vec(finite_elements(e),fe_r_vec)
+      !$omp critical
+      call r_vec%assemble_element_nodal_values(finite_elements(e),&
+      &fe_r_vec)
+      !$omp end critical
     end do
     !$omp end parallel do
-    if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
@@ -242,7 +198,8 @@ contains
     character(len=*), intent(out) :: emsg
     !
     integer(ik) :: i
-    type(time) :: t_complete
+    character(len=cl) :: info
+    type(time) :: t_complete, t_iter
     ! Check
     if ( .not. configured ) then
       esta = -1
@@ -260,14 +217,39 @@ contains
     d_t = alpha_t * char_fe_dim / v%max_value()
     !
     do i = 1, min(max_num_advect,num_advect)
+      if ( i == 1 .and. .not. write_iter_t ) call t_iter%start_timer()
       call r_vec_setup(esta,emsg); if ( esta /= 0 ) return
+      ! Backsubstitution or iterative solve
+      if ( .not. iter_sol ) then
+        call linear_system%solve_dir(job=2,a=m_mtx,b=r_vec%values,&
+        &x=lsf%values,esta=esta,emsg=emsg)
+        if ( esta /= 0 ) return
+      else
+        call linear_system%solve_iter(a=m_mtx,b=r_vec%values,&
+        &x=lsf%values,niter=iter_niter,tol=iter_tol,info=info,&
+        & esta=esta,emsg=emsg); if ( esta /= 0 ) return
+        !if ( i == 1 .and. .not. write_iter_t ) then
+          write(log_file,'(a)') trim(info)
+        !end if
+      end if
+      !
+      if ( i == 1 .and. .not. write_iter_t ) then
+        call t_complete%write_elapsed_time(log_file,'One advection &
+        &iteration time')
+        write_iter_t = .true.
+      end if
     end do
     !
     call t_complete%write_elapsed_time(stdout,'Advection finished, &
     &elapsed time')
-    !
+    ! Clean
+    if ( .not. iter_sol ) then
+      call linear_system%solve_dir(job=3,a=m_mtx,esta=esta,emsg=emsg)
+      if ( esta /= 0 ) return
+    end if
     lsf => null()
     v   => null()
+    call m_mtx%delete(esta,emsg); if ( esta /= 0 ) return
     call r_vec%delete(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0

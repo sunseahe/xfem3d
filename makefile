@@ -13,7 +13,7 @@ src_path = ./src
 obj_path = ./obj
 
 #Intel flags fortran
-FCFLAGSINTEL = -module $(obj_path) -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include -fpp -openmp -standard-semantics
+FCFLAGSINTEL = -module $(obj_path) -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include -fpp -openmp -D_DOUBLE
 FLFLAGSINTEL = -L$(MKLROOT)/lib/intel64 -L$(IROOT)/lib/intel64 -lmkl_blas95_lp64 -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_intel_thread -lpthread -lm -liomp5
 #Intel flags c++
 CCFLAGSINTEL = -I$(ABQROOT)/code/include -cxxlib -w -Wno-deprecated -fpermissive -DTYPENAME=typename -D_LINUX_SOURCE -DABQ_LINUX -DABQ_LNX86_64
@@ -62,11 +62,11 @@ OBJF = $(addprefix $(obj_path)/,$(OBJFT))
 #Intel
 ifeq ($(FC),ifort)
   # fortran
-  all: FCFLAGS = $(FCFLAGSINTEL)
+  all: FCFLAGS = $(FCFLAGSINTEL) 
   all: FLFLAGS = $(FLFLAGSINTEL)
   debug: FCFLAGS += $(FCFLAGSINTEL) -g -debug full -warn all -check all -std08 -diag-error-limit 1 -traceback -D_DEBUG
   debug: FLFLAGS = $(FLFLAGSINTEL)
-  opt: FCFLAGS += $(FCFLAGSINTEL) -O3 -D_DOUBLE
+  opt: FCFLAGS += $(FCFLAGSINTEL) -O3 -ipo
   opt: FLFLAGS = $(FLFLAGSINTEL)
   # c++
   all: CCFLAGS = $(CCFLAGSINTEL)

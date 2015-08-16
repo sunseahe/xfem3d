@@ -71,87 +71,32 @@ module scalar_field
     !
   end subroutine copy
 !*****************************************************************************80
-  pure subroutine set_nodal_value(self,n,nodal_value,esta,emsg)
+  pure subroutine set_nodal_value(self,n,nodal_value)
     class(scalar_field_t), intent(inout) :: self
     integer(ik), intent(in) :: n
     real(rk), intent(in) :: nodal_value
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
-    !
-    if ( debug ) then
-      if ( .not.allocated (self%values) ) then
-        esta = -1
-        emsg ='Set nodal value: field values not allocated'
-        return
-      end if
-      if ( n > size(self%values) ) then
-        esta = -1
-        emsg ='Set nodal value: node not found'
-        return
-      end if
-    end if
     !
     self%values(n) = nodal_value
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine set_nodal_value
 !*****************************************************************************80
-  pure subroutine get_element_nodal_values(self,c3d10,nodal_values,esta,emsg)
+  pure subroutine get_element_nodal_values(self,c3d10,nodal_values)
     class(scalar_field_t), intent(in) :: self
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(out) :: nodal_values(:)
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
-    ! Checks
-    if ( debug ) then
-      if ( .not. size(nodal_values)==nelnod ) then
-        esta = -1
-        emsg ='Get element nodal values: vector size incorrect'
-        return
-      end if
-      if ( .not.allocated (self%values) ) then
-        esta = -1
-        emsg ='Get element nodal values: field values not allocated'
-        return
-      end if
-    end if
     !
     nodal_values = self%values(c3d10%connectivity)
-    ! Sucess
-    esta = 0
-    emsg = ''
     !
   end subroutine  get_element_nodal_values
 !*****************************************************************************80
-  pure subroutine assemble_element_nodal_values(self,c3d10,nodal_values,&
-  &esta,emsg)
+  pure subroutine assemble_element_nodal_values(self,c3d10,nodal_values)
     class(scalar_field_t), intent(inout) :: self
     type(c3d10_t), intent(in) :: c3d10
     real(rk), intent(in) :: nodal_values(:)
-    integer(ik), intent(out) :: esta
-    character(len=cl), intent(out) :: emsg
-    ! Checks
-    if ( debug ) then
-      if ( .not. size(nodal_values)==nelnod ) then
-        esta = -1
-        emsg ='Get element nodal values: vector size incorrect'
-        return
-      end if
-      if ( .not.allocated (self%values) ) then
-        esta = -1
-        emsg ='Get element nodal values: field values not allocated'
-        return
-      end if
-    end if
     ! Assemble
     associate( c => c3d10%connectivity )
     self%values(c) = self%values(c) + nodal_values
     end associate
-    ! Sucess
-    esta = 0
-    emsg = ''
   end subroutine assemble_element_nodal_values
 !*****************************************************************************80
   pure subroutine delete(self,esta,emsg)
