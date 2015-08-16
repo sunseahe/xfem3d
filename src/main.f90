@@ -14,6 +14,7 @@ program xfem_tetra_test
   character(len=cl) :: emsg = ''
 !*****************************************************************************80
   logical(lk) :: input_file_given = .false.
+  character(cl) :: log_file_name = ''
 !*****************************************************************************80
   integer(ik) :: cpus = 1
   logical(lk) :: cpus_given = .false.
@@ -40,8 +41,9 @@ program xfem_tetra_test
 !*****************************************************************************80
 ! Create log file
 !*****************************************************************************80
-  open(unit=log_file,file=change_extension(input_file_name,'log'),&
-  &iostat=esta,iomsg=emsg,action='write',status='replace')
+  log_file_name = change_extension(input_file_name,'log')
+  open(unit=log_file,file=log_file_name ,iostat=esta,iomsg=emsg,&
+  &action='write',status='replace')
   if ( esta /= 0 ) call print_error(esta,emsg)
 !*****************************************************************************80
 ! Start odb api

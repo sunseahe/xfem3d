@@ -161,7 +161,7 @@ contains
     real(rk) :: sdf_0_gp, sdf_gp
     real(rk) :: grad_sdf(dom), norm_sdf(dom)
     real(rk) :: s_0, v(dom), v_tilde(nelnod)
-    real(rk) :: rtmp1(dom), rtmp2(nelnod)
+    real(rk) :: rtmp1(dom), rtmp2(nelnod), rtmp3
     real(rk) :: r1(nelnod), r2(nelnod), r3(nelnod)
     !
     r1 = 0.0e0_rk; r2 = 0.0e0_rk; r3 = 0.0e0_rk
@@ -180,8 +180,8 @@ contains
       v = s_0 * norm_sdf
       !
       call gemv(inv_jac_mtx,v,rtmp1)
-      beta1 = 1.0e0_rk / ( 2.0e0_rk * sqrt( d_t**(-2) + &
-      & reg_pnorm(2,rtmp1) ) )
+      rtmp3 = sqrt( pnorm(2,rtmp1)**2 + char_fe_dim**2 ) ! Bug
+      beta1 = 1.0e0_rk / ( 2.0e0_rk * sqrt( d_t**(-2) + rtmp3 ) )
       call gemv(transpose(b),v,rtmp2)
       v_tilde = n + beta1 * rtmp2
       !
