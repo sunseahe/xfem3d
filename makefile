@@ -8,7 +8,7 @@ ifeq ($(comp),gcc)
   CC = g++
 endif
 
-double = #-D_DOUBLE
+double = -D_DOUBLE
 
 #Folders
 src_path = ./src

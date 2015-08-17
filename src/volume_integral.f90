@@ -11,6 +11,7 @@ module volume_integral
   &  write_scalar_field, close_odb_file
   use read_input, only: input_file_name
   use reinitalzation, only: calculate_reinitalization, r_conf => configured
+  use hamilton_jacobi, only: calculate_advection, a_conf => configured
 !*****************************************************************************80
   implicit none
   private
@@ -46,14 +47,14 @@ contains
     ! Functions
     !call write_ind_fun('Sphere',1,1.0_rk,s_5,esta,emsg)
     !if ( esta /= 0 ) return
-    !call write_ind_fun('Ellipsoid',1,1.0_rk,s_1,esta,emsg)
-    !if ( esta /= 0 ) return
+    call write_ind_fun('Ellipsoid',1,1.0_rk,s_1,esta,emsg)
+    if ( esta /= 0 ) return
     !call write_ind_fun('Torus',3,3.0_rk,s_2,esta,emsg)
     !if ( esta /= 0 ) return
     !call write_ind_fun('Genus two',1,1.0_rk,s_3,esta,emsg)
     !if ( esta /= 0 ) return
-    call write_ind_fun('Genus seven',1,1.0_rk,s_4,esta,emsg)
-    if ( esta /= 0 ) return
+    !call write_ind_fun('Genus seven',1,1.0_rk,s_4,esta,emsg)
+    !if ( esta /= 0 ) return
     ! Close odb file
     call close_odb_file(esta,emsg)
     if( esta /= 0 ) return
@@ -105,17 +106,48 @@ contains
       call write_scalar_field(step,frame_num,field_name,&
       & field_description,lsf%values,.true.,esta,emsg)
       if ( esta /= 0 ) return
+      ! Advect
+      if ( a_conf ) then
+        call advect_ind_fun(name,frame_num+1,time+1.0_rk,lsf,esta,emsg)
+      end if
       ! Sucess
       esta = 0
       emsg = ''
     end subroutine write_ind_fun
+!*****************************************************************************80
+    subroutine advect_ind_fun(name,frame_num,time,lsf,esta,emsg)
+      character(len=*), intent(in) :: name
+      integer(ik), intent(in) :: frame_num
+      real(rk), intent(in) :: time
+      type(scalar_field_t), intent(inout) :: lsf
+      integer(ik), intent(out) :: esta
+      character(len=*), intent(out) :: emsg
+      !
+      call calculate_advection(lsf,velocity,5,1.0e-1_rk,&
+      &esta,emsg); if ( esta /= 0 ) return
+      !
+      call write_scalar_field(step,frame_num,field_name,&
+      & field_description,lsf%values,.true.,esta,emsg)
+      if ( esta /= 0 ) return
+      !
+    end subroutine advect_ind_fun
+!*****************************************************************************80
+    subroutine velocity(lsf,v,esta,emsg)
+      type(scalar_field_t), intent(in) :: lsf
+      type(scalar_field_t), intent(out) :: v
+      integer(ik), intent(out) :: esta
+      character(len=*), intent(out) :: emsg
+      call v%set(esta=esta,emsg=emsg)
+      v%values = 1.0_rk
+    end subroutine velocity
+!*****************************************************************************80
   end subroutine write_test_functions
 
   pure function heaviside(x) result(res)
     real(rk), intent(in) :: x
     real(rk) :: res
     !
-    real(rk), parameter :: alpha = 1.0e-8_rk
+    real(rk), parameter :: alpha = 1.0e-16_rk
     !
     associate ( delta => char_fe_dim )
     if( x < -delta ) then

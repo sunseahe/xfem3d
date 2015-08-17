@@ -29,8 +29,10 @@ module hamilton_jacobi
   type(sparse_linear_system_t), save :: linear_system
 !*****************************************************************************80
   type(scalar_field_t), pointer :: lsf
-  type(scalar_field_t), pointer :: v
+  type(scalar_field_t), save :: v
   type(scalar_field_t), save :: r_vec
+!*****************************************************************************80
+  public :: configured, calculate_advection
 !*****************************************************************************80
 contains
 !*****************************************************************************80
@@ -188,12 +190,20 @@ contains
 !*****************************************************************************80
 ! Calculate advection
 !*****************************************************************************80
-  subroutine caluclate_advection(lsf_inout,v_in,num_advect,alpha_t,&
+  subroutine calculate_advection(lsf_inout,velocity,num_advect,alpha_t,&
     &esta,emsg)
     type(scalar_field_t), target, intent(inout) :: lsf_inout
-    type(scalar_field_t), target, intent(in) :: v_in
     integer(ik), intent(in) :: num_advect
     real(rk), intent(in) :: alpha_t
+    interface
+      subroutine velocity(lsf,v,esta,emsg)
+        import :: ik, scalar_field_t
+        type(scalar_field_t), intent(in) :: lsf
+        type(scalar_field_t), intent(out) :: v
+        integer(ik), intent(out) :: esta
+      character(len=*), intent(out) :: emsg
+      end subroutine velocity
+    end interface
     integer(ik), intent(out) :: esta
     character(len=*), intent(out) :: emsg
     !
@@ -208,7 +218,6 @@ contains
     end if
     !
     lsf => lsf_inout
-    v   => v_in
     call r_vec%set(esta=esta,emsg=emsg); if ( esta /= 0 ) return
     ! Advect
     write(stdout,'(a)') 'Solving the Hamilton Jacobi equation ...'
@@ -218,6 +227,8 @@ contains
     !
     do i = 1, min(max_num_advect,num_advect)
       if ( i == 1 .and. .not. write_iter_t ) call t_iter%start_timer()
+      ! Get advection velocity
+      call velocity(lsf,v,esta,emsg); if ( esta /= 0 ) return
       call r_vec_setup(esta,emsg); if ( esta /= 0 ) return
       ! Backsubstitution or iterative solve
       if ( .not. iter_sol ) then
@@ -248,13 +259,13 @@ contains
       if ( esta /= 0 ) return
     end if
     lsf => null()
-    v   => null()
     call m_mtx%delete(esta,emsg); if ( esta /= 0 ) return
+    call v%delete(esta,emsg); if ( esta /= 0 ) return
     call r_vec%delete(esta,emsg); if ( esta /= 0 ) return
     ! Sucess
     esta = 0
     emsg = ''
     !
-  end subroutine caluclate_advection
+  end subroutine calculate_advection
 !*****************************************************************************80
 end module hamilton_jacobi

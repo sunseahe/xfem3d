@@ -29,8 +29,8 @@ module reinitalzation
   ! written
 !*****************************************************************************80
   logical(lk) :: iter_sol = .false. ! Iterative solver
-  integer(ik) :: iter_niter = 200 ! Number of iterations for iterative solver
-  real(rk) :: iter_tol = 1.0e-8_rk ! Tolerance
+  integer(ik) :: iter_niter = 50 ! Number of iterations for iterative solver
+  real(rk) :: iter_tol = 1.0e-10_rk ! Tolerance
 !*****************************************************************************80
   type(scalar_field_t), save :: sdf_0
   type(scalar_field_t), pointer :: sdf => null()
@@ -180,9 +180,9 @@ contains
       v = s_0 * norm_sdf
       !
       call gemv(inv_jac_mtx,v,rtmp1)
-      rtmp3 = sqrt( pnorm(2,rtmp1)**2 + char_fe_dim**2 ) ! Bug
-      beta1 = 1.0e0_rk / ( 2.0e0_rk * sqrt( d_t**(-2) + rtmp3 ) )
       call gemv(transpose(b),v,rtmp2)
+      rtmp3 = reg_pnorm(2,rtmp1) !sqrt( pnorm(2,rtmp1)**2 + char_fe_dim**2 ) ! Bug
+      beta1 = 1.0e0_rk / ( 2.0e0_rk * sqrt( d_t**(-2) + rtmp3 ) )
       v_tilde = n + beta1 * rtmp2
       !
       r1 = r1 + s_0 * v_tilde * w(p) * det_jac

@@ -112,8 +112,8 @@ module mesh_data
       vol = vol + w(p) * det_jac
     end do
     !print*, vol
-    !le = (12.0_rk * vol)**(1.0_rk/3.0_rk) / 2.0_rk
-    le = vol**(1.0_rk/3.0_rk)
+    le = (12.0_rk * vol)**(1.0_rk/3.0_rk) / 2.0_rk
+    !le = vol**(1.0_rk/3.0_rk)
     !
   end subroutine calc_char_fe_dim
   subroutine min_char_fe_dim()
