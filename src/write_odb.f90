@@ -6,7 +6,7 @@ module write_odb
   use general_routines, only: f2c_char
   use point, only: dom
   use fe_c3d10, only: nelnod
-  use mesh_data, only: fe_type, fe_type, nodes, finite_elements
+  use mesh_data, only: fe_type, nodes, finite_elements
   use read_input, only: input_file_name
 !*****************************************************************************80
   implicit none
@@ -206,16 +206,11 @@ module write_odb
     !
   end subroutine write_scalar_field
 !*****************************************************************************80
-! Write scalar field
+! Close odb
 !*****************************************************************************80
-  subroutine close_odb_file(esta,emsg)
-    integer(ik), intent(out) :: esta
-    character(len=*), intent(out) :: emsg
+  subroutine close_odb_file()
     call close_odb(odb)
     odb = c_null_ptr
-    ! Sucess
-    esta = 0
-    emsg = ''
   end subroutine close_odb_file
 !*****************************************************************************80
 end module write_odb
