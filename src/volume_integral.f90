@@ -47,14 +47,14 @@ contains
     ! Functions
     !call write_ind_fun('Sphere',1,1.0_rk,s_5,esta,emsg)
     !if ( esta /= 0 ) return
-    call write_ind_fun('Ellipsoid',1,1.0_rk,s_1,esta,emsg)
-    if ( esta /= 0 ) return
+    !call write_ind_fun('Ellipsoid',1,1.0_rk,s_1,esta,emsg)
+    !if ( esta /= 0 ) return
     !call write_ind_fun('Torus',3,3.0_rk,s_2,esta,emsg)
     !if ( esta /= 0 ) return
     !call write_ind_fun('Genus two',1,1.0_rk,s_3,esta,emsg)
     !if ( esta /= 0 ) return
-    !call write_ind_fun('Genus seven',1,1.0_rk,s_4,esta,emsg)
-    !if ( esta /= 0 ) return
+    call write_ind_fun('Genus seven',1,1.0_rk,s_4,esta,emsg)
+    if ( esta /= 0 ) return
     ! Close odb file
     call close_odb_file(esta,emsg)
     if( esta /= 0 ) return
