@@ -44,6 +44,7 @@ contains
     if( esta /= 0 ) return
     ! Step
     call create_step(step,'LSF values',esta,emsg)
+    if( esta /= 0 ) return
     ! Functions
     !call write_ind_fun('Sphere',1,1.0_rk,s_5,esta,emsg)
     !if ( esta /= 0 ) return
